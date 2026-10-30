@@ -199,26 +199,6 @@ export function App() {
       <a href="#workspace" className="skip">
         Skip to workspace
       </a>
-      <header className="topbar">
-        <h1>
-          <span className="logo" />
-          OKLCH <span className="muted">/ browser lab</span>
-        </h1>
-        <div className="top-actions">
-          <span className="status-dot" />
-          sRGB canvas{" "}
-          <button
-            aria-label="Browser color support"
-            onClick={() => {
-              setMessage(
-                `OKLCH: ${CSS.supports("color", "oklch(0.7 0.1 180)") ? "supported" : "unsupported"} · Display P3: ${matchMedia("(color-gamut: p3)").matches ? "available" : "unavailable"}`,
-              );
-            }}
-          >
-            <ExternalLink size={16} />
-          </button>
-        </div>
-      </header>
       <main id="workspace" className="workspace">
         <aside className="left-column">
           <section className="panel color-panel">
