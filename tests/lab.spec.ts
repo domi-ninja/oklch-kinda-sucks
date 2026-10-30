@@ -174,7 +174,7 @@ test("preset rename, save, delete and compiler recovery", async ({ page }) => {
   await page.getByRole("button", { name: "Delete preset" }).click();
   await expect(
     page.getByLabel("Preset", { exact: true }).locator("option"),
-  ).toHaveCount(3);
+  ).toHaveCount(4);
 });
 
 test("light and dark previews stay stacked and both export offline", async ({

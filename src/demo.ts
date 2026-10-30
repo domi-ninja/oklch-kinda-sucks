@@ -92,6 +92,51 @@ export const presets: Preset[] = [
     },
     extra: "",
   },
+  {
+    id: "brutalist",
+    name: "Brutalist",
+    tokens: {
+      ...baseTokens,
+      background: "oklch(0.96 0.065 100)",
+      foreground: "oklch(0.18 0.015 280)",
+      card: "oklch(0.99 0.015 100)",
+      "card-foreground": "oklch(0.18 0.015 280)",
+      primary: "oklch(0.88 0.23 128)",
+      "primary-foreground": "oklch(0.18 0.015 280)",
+      secondary: "oklch(0.8 0.13 280)",
+      "secondary-foreground": "oklch(0.18 0.015 280)",
+      accent: "oklch(0.78 0.18 340)",
+      "accent-foreground": "oklch(0.18 0.015 280)",
+      muted: "oklch(0.91 0.06 100)",
+      "muted-foreground": "oklch(0.4 0.025 280)",
+      destructive: "oklch(0.7 0.2 35)",
+      "destructive-foreground": "oklch(0.18 0.015 280)",
+      border: "oklch(0.18 0.015 280)",
+    },
+    extra: `@theme {
+  --radius-lg: 0;
+  --radius-xl: 0;
+}
+:root { color-scheme: light; }
+.dark {
+  color-scheme: dark;
+  --color-background: oklch(0.2 0.015 280);
+  --color-foreground: oklch(0.96 0.025 100);
+  --color-card: oklch(0.26 0.015 280);
+  --color-card-foreground: oklch(0.96 0.025 100);
+  --color-border: oklch(0.88 0.12 100);
+  --color-secondary: oklch(0.72 0.15 280);
+  --color-secondary-foreground: oklch(0.18 0.015 280);
+  --color-muted: oklch(0.32 0.025 280);
+  --color-muted-foreground: oklch(0.82 0.03 280);
+}
+main { font-family: ui-monospace, monospace; }
+main :is(section, button, input, .rounded-full) { border-radius: 0; }
+main section { border: 2px solid var(--color-border); box-shadow: 5px 5px 0 var(--color-border); }
+main :is(button, input:not([type="checkbox"])) { border: 2px solid var(--color-border); }
+main button { font-weight: 700; box-shadow: 3px 3px 0 var(--color-border); }
+main button:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--color-border); }`,
+  },
 ];
 
 // Recognize the retired built-in while keeping user-edited versions intact.

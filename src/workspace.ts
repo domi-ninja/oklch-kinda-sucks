@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useState } from "react";
 import { gzipSync, gunzipSync, strToU8, strFromU8 } from "fflate";
 import { z } from "zod";
 import { isRetiredPreset, sourceFor, baseTokens } from "./demo";
+import { normalizePresets } from "./presets";
 export const pickerModes = ["RGB", "HSL", "HCL", "OKHCL"] as const;
 export type PickerMode = (typeof pickerModes)[number];
 const schema = z.object({
@@ -46,8 +47,7 @@ export function decodeWorkspace(hash: string): Workspace | null {
         strFromU8(gunzipSync(Uint8Array.from(binary, (c) => c.charCodeAt(0)))),
       ),
     );
-    const saved = state.saved.filter((p) => !isRetiredPreset(p));
-    if (saved.length === state.saved.length) return state;
+    const saved = normalizePresets(state.saved);
     const retired = state.saved.find(
       (p) => p.id === state.active && isRetiredPreset(p),
     );

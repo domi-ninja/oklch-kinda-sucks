@@ -21,22 +21,16 @@ import {
   initialColor,
   type Color,
 } from "./color";
-import {
-  demoDocument,
-  presets,
-  sourceFor,
-  withDarkTheme,
-  isRetiredPreset,
-} from "./demo";
+import { demoDocument } from "./demo";
 import { useWorkspace, pickerModes, type Workspace } from "./workspace";
 import { useCompiler } from "./useCompiler";
 
-type Saved = { id: string; name: string; source: string };
-const defaults = presets.map((p) => ({
-  id: p.id,
-  name: p.name,
-  source: sourceFor(p.tokens, p.extra),
-}));
+import {
+  defaultPresets as defaults,
+  isDefaultPreset,
+  normalizePresets,
+  type Saved,
+} from "./presets";
 function loadPresets(): Saved[] {
   try {
     const saved: unknown = JSON.parse(
@@ -51,9 +45,7 @@ function loadPresets(): Saved[] {
           typeof p.source === "string",
       )
     )
-      return saved
-        .filter((p) => !isRetiredPreset(p))
-        .map((p) => ({ ...p, source: withDarkTheme(p.source) }));
+      return normalizePresets(saved);
   } catch {
     /* Use built-ins when storage is unavailable. */
   }
@@ -178,6 +170,18 @@ export function App() {
     } catch {
       setMessage("Browser storage is full or unavailable");
       return false;
+    }
+  };
+  const createPreset = () => {
+    const name = prompt(
+      "Preset name",
+      `${saved.find((p) => p.id === active)?.name ?? "Untitled"} copy`,
+    );
+    if (!name?.trim()) return;
+    const preset = { id: crypto.randomUUID(), name: name.trim(), source };
+    if (persist([...saved, preset])) {
+      set("active", preset.id);
+      setMessage("Preset created");
     }
   };
   const choose = (id: string) => {
@@ -413,19 +417,7 @@ export function App() {
               <Button
                 variant="ghost"
                 aria-label="Create preset"
-                onClick={() => {
-                  const name = prompt("Preset name", "Untitled");
-                  if (!name?.trim()) return;
-                  const p = {
-                    id: crypto.randomUUID(),
-                    name: name.trim(),
-                    source,
-                  };
-                  if (persist([...saved, p])) {
-                    set("active", p.id);
-                    setMessage("Preset created");
-                  }
-                }}
+                onClick={createPreset}
               >
                 <Plus size={16} />
               </Button>
@@ -448,8 +440,8 @@ export function App() {
               <Button
                 variant="outline"
                 onClick={() => {
-                  if (!active) {
-                    setMessage("Create a preset first");
+                  if (!active || isDefaultPreset(active)) {
+                    createPreset();
                     return;
                   }
                   if (
@@ -463,13 +455,16 @@ export function App() {
                 }}
               >
                 <Save size={15} />
-                Save{dirty ? " *" : ""}
+                {!active || isDefaultPreset(active)
+                  ? "Save as new"
+                  : `Save${dirty ? " *" : ""}`}
               </Button>
               <Button
                 variant="outline"
                 aria-label="Rename preset"
-                disabled={!active}
+                disabled={!active || isDefaultPreset(active)}
                 onClick={() => {
+                  if (isDefaultPreset(active)) return;
                   const name = prompt(
                     "Preset name",
                     saved.find((p) => p.id === active)?.name,
@@ -487,8 +482,9 @@ export function App() {
               <Button
                 variant="outline"
                 aria-label="Delete preset"
-                disabled={!active}
+                disabled={!active || isDefaultPreset(active)}
                 onClick={() => {
+                  if (isDefaultPreset(active)) return;
                   if (!confirm("Delete this preset?")) return;
                   const next = saved.filter((p) => p.id !== active);
                   if (persist(next)) {

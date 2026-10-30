@@ -15,7 +15,7 @@ Open the local URL printed by Vite. Pick a theme color, adjust the plane or slid
 
 Use Add picker to open synchronized RGB, HSL, HCL, or OKHCL panels. Each panel has its own mode selector and close button. HCL uses CIELCH D50; OKHCL uses OKLCH. RGB and HSL controls use the browser's sRGB result.
 
-The URL updates with every workspace edit. Copy it to restore picker panels, the shared color, selected theme color, unsaved CSS, presets, color format, preview width and tab on another browser. Presets also save locally when you press Save.
+The URL updates with every workspace edit. Copy it to restore picker panels, the shared color, selected theme color, unsaved CSS, presets, color format, preview width and tab on another browser. Presets also save locally when you press Save. Built-in themes are protected. Use Save as new to keep an edited copy. The Brutalist theme uses square corners, hard shadows, and bright colors.
 
 Light and dark previews appear together, one above the other.
 
