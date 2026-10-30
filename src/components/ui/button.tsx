@@ -10,8 +10,8 @@ const variants = cva(
       variant: {
         default:
           "bg-neutral-900 text-white border-neutral-900 hover:bg-neutral-700",
-        outline: "bg-white border-neutral-300 hover:bg-neutral-100",
-        ghost: "border-transparent hover:bg-neutral-200",
+        outline: "bg-[#bcbcbc] border-[#838383] hover:bg-[#cccccc]",
+        ghost: "border-transparent hover:bg-[#c5c5c5]",
       },
     },
     defaultVariants: { variant: "default" },

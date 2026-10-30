@@ -8,11 +8,15 @@ export const demoBody = `<main class="min-h-screen bg-background text-foreground
   </div>
 </main>`;
 export const demoScript = `document.getElementById('save').onclick=()=>document.getElementById('status').textContent='Settings saved';document.getElementById('project').onclick=()=>document.getElementById('status').textContent='Project opened';document.getElementById('archive').onclick=()=>document.getElementById('status').textContent='Project archived';document.getElementById('remove').onclick=()=>document.getElementById('status').textContent='Member removed';`;
-export function demoDocument(css: string, externalStylesheet = false) {
+export function demoDocument(
+  css: string,
+  externalStylesheet = false,
+  dark = false,
+) {
   const styles = externalStylesheet
     ? '<link rel="stylesheet" href="./styles.css">'
     : `<style>${css.replace(/<\/style/gi, "<\\/style")}</style>`;
-  return `<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Palette studio preview</title>${styles}</head><body>${demoBody}<script>${demoScript}</script></body></html>`;
+  return `<!doctype html><html lang="en" class="${dark ? "dark" : ""}"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Palette studio preview</title>${styles}</head><body>${demoBody}<script>${demoScript}</script></body></html>`;
 }
 export const candidates = [
   ...new Set(
@@ -38,10 +42,32 @@ export const baseTokens: Record<string, string> = {
   "destructive-foreground": "oklch(1 0 0)",
   border: "oklch(0.88 0.012 180)",
 };
-export const sourceFor = (tokens: Record<string, string>, extra: string) =>
-  `@import "tailwindcss";\n\n@theme {\n${Object.entries(tokens)
+const darkTokens: Record<string, string> = {
+  background: "oklch(0.18 0.008 260)",
+  foreground: "oklch(0.94 0.005 260)",
+  card: "oklch(0.23 0.008 260)",
+  "card-foreground": "oklch(0.94 0.005 260)",
+  secondary: "oklch(0.3 0.012 260)",
+  "secondary-foreground": "oklch(0.94 0.005 260)",
+  muted: "oklch(0.28 0.008 260)",
+  "muted-foreground": "oklch(0.73 0.008 260)",
+  accent: "oklch(0.34 0.035 165)",
+  "accent-foreground": "oklch(0.94 0.02 165)",
+  border: "oklch(0.38 0.008 260)",
+};
+const declarations = (tokens: Record<string, string>) =>
+  Object.entries(tokens)
     .map(([key, value]) => `  --color-${key}: ${value};`)
-    .join("\n")}\n}\n\n${extra}`;
+    .join("\n");
+// Upgrade older saved presets without replacing their existing colors.
+export const withDarkTheme = (source: string) =>
+  /\.dark\b/.test(source)
+    ? source
+    : `${source}\n\n:root { color-scheme: light; }\n.dark {\n  color-scheme: dark;\n${declarations(darkTokens)}\n}\n`;
+export const sourceFor = (tokens: Record<string, string>, extra: string) =>
+  withDarkTheme(
+    `@import "tailwindcss";\n\n@theme {\n${declarations(tokens)}\n}\n\n${extra}`,
+  );
 export type Preset = {
   id: string;
   name: string;

@@ -176,3 +176,43 @@ test("preset rename, save, delete and compiler recovery", async ({ page }) => {
     page.getByLabel("Preset", { exact: true }).locator("option"),
   ).toHaveCount(4);
 });
+
+test("preview dark mode changes only the demo and exports its selected mode", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const editorBackground = await page
+    .locator(".color-panel")
+    .evaluate((el) => getComputedStyle(el).backgroundColor);
+  const frame = page.frameLocator("iframe");
+  await expect(frame.locator("main")).toHaveCSS(
+    "background-color",
+    "oklch(0.985 0.002 180)",
+  );
+  await page.getByRole("button", { name: "Dark mode", exact: true }).click();
+  await expect(frame.locator("html")).toHaveClass("dark");
+  await expect(frame.locator("main")).toHaveCSS(
+    "background-color",
+    "oklch(0.18 0.008 260)",
+  );
+  await expect(frame.locator("html")).toHaveCSS("color-scheme", "dark");
+  await expect(page.locator(".color-panel")).toHaveCSS(
+    "background-color",
+    editorBackground,
+  );
+  await expect(
+    page.getByRole("button", { name: "Dark mode", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  const downloading = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Export app" }).click();
+  const { readFile } = await import("node:fs/promises");
+  const files = unzipSync(await readFile((await (await downloading).path())!));
+  expect(strFromU8(files["index.html"])).toContain('class="dark"');
+  expect(strFromU8(files["src/index.html"])).toContain('class="dark"');
+  expect(strFromU8(files["theme.css"])).toContain(".dark {");
+  await page.getByRole("button", { name: "Dark mode", exact: true }).click();
+  await expect(frame.locator("main")).toHaveCSS(
+    "background-color",
+    "oklch(0.985 0.002 180)",
+  );
+});

@@ -20,7 +20,14 @@ import {
   initialColor,
   type Color,
 } from "./color";
-import { demoDocument, demoBody, demoScript, presets, sourceFor } from "./demo";
+import {
+  demoDocument,
+  demoBody,
+  demoScript,
+  presets,
+  sourceFor,
+  withDarkTheme,
+} from "./demo";
 import { useCompiler } from "./useCompiler";
 
 type Saved = { id: string; name: string; source: string };
@@ -43,7 +50,7 @@ function loadPresets(): Saved[] {
           typeof p.source === "string",
       )
     )
-      return saved;
+      return saved.map((p) => ({ ...p, source: withDarkTheme(p.source) }));
   } catch {
     /* Use built-ins when storage is unavailable. */
   }
@@ -80,6 +87,7 @@ export function App() {
   const [message, setMessage] = useState("");
   const [inputError, setInputError] = useState("");
   const [tab, setTab] = useState<"preview" | "source" | "compiled">("preview");
+  const [darkPreview, setDarkPreview] = useState(false);
   const [width, setWidth] = useState("100%");
   const compiled = useCompiler(source);
   const entries = useMemo(
@@ -88,8 +96,12 @@ export function App() {
         value: match[0],
         index: match.index,
         name:
-          source.slice(0, match.index).match(/--([\w-]+):\s*$/)?.[1] ??
-          `color-${match.index}`,
+          (source.lastIndexOf(".dark {", match.index) >
+          source.lastIndexOf("}", match.index)
+            ? "dark / "
+            : "") +
+          (source.slice(0, match.index).match(/--([\w-]+):\s*$/)?.[1] ??
+            `color-${match.index}`),
       })),
     [source],
   );
@@ -167,11 +179,11 @@ export function App() {
   };
   const exportApp = () => {
     const files = {
-      "index.html": strToU8(demoDocument(compiled.css, true)),
+      "index.html": strToU8(demoDocument(compiled.css, true, darkPreview)),
       "styles.css": strToU8(compiled.css),
       "theme.css": strToU8(source),
       "src/index.html": strToU8(
-        `<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="../styles.css"><title>Palette studio</title></head><body>${demoBody}<script>${demoScript}</script></body></html>`,
+        `<!doctype html><html lang="en" class="${darkPreview ? "dark" : ""}"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="../styles.css"><title>Palette studio</title></head><body>${demoBody}<script>${demoScript}</script></body></html>`,
       ),
       "package.json": strToU8(
         JSON.stringify(
@@ -475,6 +487,13 @@ export function App() {
             <>
               <div className="preview-toolbar">
                 <span>/ demo</span>
+                <Button
+                  variant={darkPreview ? "default" : "outline"}
+                  aria-pressed={darkPreview}
+                  onClick={() => setDarkPreview(!darkPreview)}
+                >
+                  Dark mode
+                </Button>
                 <select
                   aria-label="Preview width"
                   value={width}
@@ -492,9 +511,12 @@ export function App() {
                   }
                   onClick={() => {
                     const url = URL.createObjectURL(
-                      new Blob([demoDocument(compiled.css)], {
-                        type: "text/html",
-                      }),
+                      new Blob(
+                        [demoDocument(compiled.css, false, darkPreview)],
+                        {
+                          type: "text/html",
+                        },
+                      ),
                     );
                     window.open(url, "_blank", "noopener");
                     setTimeout(() => URL.revokeObjectURL(url), 60000);
@@ -507,7 +529,7 @@ export function App() {
                 <iframe
                   title="Tailwind component preview"
                   sandbox="allow-scripts"
-                  srcDoc={demoDocument(compiled.css)}
+                  srcDoc={demoDocument(compiled.css, false, darkPreview)}
                   style={{ width, maxWidth: "100%" }}
                 />
               </div>
