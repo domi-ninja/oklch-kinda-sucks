@@ -102,7 +102,6 @@ test("URL restores the entire unsaved workspace without browser storage", async 
     .getByLabel("Picker mode", { exact: true })
     .last()
     .selectOption("HCL");
-  await page.getByRole("button", { name: "Dark mode", exact: true }).click();
   await page.getByLabel("Preview width", { exact: true }).selectOption("375px");
   await page.getByRole("tab", { name: "Theme CSS", exact: true }).click();
   const editor = page.getByLabel("Tailwind theme stylesheet");
@@ -128,7 +127,6 @@ test("URL restores the entire unsaved workspace without browser storage", async 
   const url = page.url();
   const snapshot = decodeWorkspace(new URL(url).hash)!;
   expect(snapshot.pickers.map((p) => p.mode)).toEqual(["OKHCL", "HCL"]);
-  expect(snapshot.darkPreview).toBe(true);
   expect(snapshot.source).toContain("--radius-lg: 2rem");
   expect(snapshot.selected).not.toBeNull();
   const context = await browser.newContext();
@@ -145,15 +143,14 @@ test("URL restores the entire unsaved workspace without browser storage", async 
   await shared.reload();
   expect(decodeWorkspace(new URL(shared.url()).hash)).toEqual(snapshot);
   await shared.getByRole("tab", { name: "Preview", exact: true }).click();
-  await expect(
-    shared.getByRole("button", { name: "Dark mode", exact: true }),
-  ).toHaveAttribute("aria-pressed", "true");
   await expect(shared.getByLabel("Preview width", { exact: true })).toHaveValue(
     "375px",
   );
-  await expect(shared.frameLocator("iframe").locator("html")).toHaveClass(
-    "dark",
-  );
+  await expect(
+    shared
+      .frameLocator('iframe[title="Tailwind dark preview"]')
+      .locator("html"),
+  ).toHaveClass("dark");
   await context.close();
 });
 

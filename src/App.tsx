@@ -23,11 +23,10 @@ import {
 } from "./color";
 import {
   demoDocument,
-  demoBody,
-  demoScript,
   presets,
   sourceFor,
   withDarkTheme,
+  isRetiredPreset,
 } from "./demo";
 import { useWorkspace, pickerModes, type Workspace } from "./workspace";
 import { useCompiler } from "./useCompiler";
@@ -52,7 +51,9 @@ function loadPresets(): Saved[] {
           typeof p.source === "string",
       )
     )
-      return saved.map((p) => ({ ...p, source: withDarkTheme(p.source) }));
+      return saved
+        .filter((p) => !isRetiredPreset(p))
+        .map((p) => ({ ...p, source: withDarkTheme(p.source) }));
   } catch {
     /* Use built-ins when storage is unavailable. */
   }
@@ -91,7 +92,6 @@ function initialWorkspace(): Workspace {
     input: cssColor(color),
     format: "css",
     tab: "preview",
-    darkPreview: false,
     width: "100%",
     pickers: [{ id: "initial", mode: "OKHCL" }],
   };
@@ -107,7 +107,6 @@ export function App() {
     input,
     format,
     tab,
-    darkPreview,
     width,
     pickers,
   } = state;
@@ -199,11 +198,21 @@ export function App() {
   };
   const exportApp = () => {
     const files = {
-      "index.html": strToU8(demoDocument(compiled.css, true, darkPreview)),
+      "index.html": strToU8(demoDocument(compiled.css, true)),
+      "dark.html": strToU8(demoDocument(compiled.css, true, true)),
       "styles.css": strToU8(compiled.css),
       "theme.css": strToU8(source),
       "src/index.html": strToU8(
-        `<!doctype html><html lang="en" class="${darkPreview ? "dark" : ""}"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="../styles.css"><title>Palette studio</title></head><body>${demoBody}<script>${demoScript}</script></body></html>`,
+        demoDocument(compiled.css, true).replace(
+          'href="./styles.css"',
+          'href="../styles.css"',
+        ),
+      ),
+      "src/dark.html": strToU8(
+        demoDocument(compiled.css, true, true).replace(
+          'href="./styles.css"',
+          'href="../styles.css"',
+        ),
       ),
       "package.json": strToU8(
         JSON.stringify(
@@ -575,13 +584,6 @@ export function App() {
             <>
               <div className="preview-toolbar">
                 <span>/ demo</span>
-                <Button
-                  variant={darkPreview ? "default" : "outline"}
-                  aria-pressed={darkPreview}
-                  onClick={() => set("darkPreview", !darkPreview)}
-                >
-                  Dark mode
-                </Button>
                 <select
                   aria-label="Preview width"
                   value={width}
@@ -593,35 +595,43 @@ export function App() {
                   <option value="375px">375px</option>
                   <option value="768px">768px</option>
                 </select>
-                <Button
-                  variant="ghost"
-                  aria-label="Open standalone preview"
-                  disabled={
-                    !compiled.css || compiled.pending || !!compiled.error
-                  }
-                  onClick={() => {
-                    const url = URL.createObjectURL(
-                      new Blob(
-                        [demoDocument(compiled.css, false, darkPreview)],
-                        {
-                          type: "text/html",
-                        },
-                      ),
-                    );
-                    window.open(url, "_blank", "noopener");
-                    setTimeout(() => URL.revokeObjectURL(url), 60000);
-                  }}
-                >
-                  <ExternalLink size={16} />
-                </Button>
               </div>
               <div className="iframe-wrap">
-                <iframe
-                  title="Tailwind component preview"
-                  sandbox="allow-scripts"
-                  srcDoc={demoDocument(compiled.css, false, darkPreview)}
-                  style={{ width, maxWidth: "100%" }}
-                />
+                {[
+                  { label: "Light", dark: false },
+                  { label: "Dark", dark: true },
+                ].map((mode) => (
+                  <section className="preview-variant" key={mode.label}>
+                    <div className="preview-variant-heading">
+                      <h2>{mode.label}</h2>
+                      <Button
+                        variant="ghost"
+                        aria-label={`Open ${mode.label.toLowerCase()} preview`}
+                        disabled={
+                          !compiled.css || compiled.pending || !!compiled.error
+                        }
+                        onClick={() => {
+                          const url = URL.createObjectURL(
+                            new Blob(
+                              [demoDocument(compiled.css, false, mode.dark)],
+                              { type: "text/html" },
+                            ),
+                          );
+                          window.open(url, "_blank", "noopener");
+                          setTimeout(() => URL.revokeObjectURL(url), 60000);
+                        }}
+                      >
+                        <ExternalLink size={16} />
+                      </Button>
+                    </div>
+                    <iframe
+                      title={`Tailwind ${mode.label.toLowerCase()} preview`}
+                      sandbox="allow-scripts"
+                      srcDoc={demoDocument(compiled.css, false, mode.dark)}
+                      style={{ width, maxWidth: "100%" }}
+                    />
+                  </section>
+                ))}
               </div>
             </>
           )}

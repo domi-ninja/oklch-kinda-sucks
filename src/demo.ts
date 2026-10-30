@@ -92,20 +92,23 @@ export const presets: Preset[] = [
     },
     extra: "",
   },
-  {
-    id: "midnight",
-    name: "Midnight",
-    tokens: {
-      ...baseTokens,
-      background: "oklch(0.17 0.015 260)",
-      foreground: "oklch(0.95 0.01 260)",
-      card: "oklch(0.22 0.02 260)",
-      "card-foreground": "oklch(0.95 0.01 260)",
-      border: "oklch(0.34 0.02 260)",
-      muted: "oklch(0.28 0.02 260)",
-      "muted-foreground": "oklch(0.75 0.02 260)",
-      secondary: "oklch(0.3 0.03 165)",
-    },
-    extra: "",
-  },
 ];
+
+// Recognize the retired built-in while keeping user-edited versions intact.
+const retiredMidnightSource = sourceFor(
+  {
+    ...baseTokens,
+    background: "oklch(0.17 0.015 260)",
+    foreground: "oklch(0.95 0.01 260)",
+    card: "oklch(0.22 0.02 260)",
+    "card-foreground": "oklch(0.95 0.01 260)",
+    border: "oklch(0.34 0.02 260)",
+    muted: "oklch(0.28 0.02 260)",
+    "muted-foreground": "oklch(0.75 0.02 260)",
+    secondary: "oklch(0.3 0.03 165)",
+  },
+  "",
+);
+export const isRetiredPreset = (preset: { id: string; source: string }) =>
+  preset.id === "midnight" &&
+  withDarkTheme(preset.source) === retiredMidnightSource;

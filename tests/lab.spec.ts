@@ -59,7 +59,7 @@ test("theme edits compile, presets persist, and exported app works offline", asy
   page,
 }) => {
   await page.goto("/");
-  const frame = page.frameLocator("iframe");
+  const frame = page.frameLocator('iframe[title="Tailwind light preview"]');
   await expect(frame.getByRole("button", { name: "Open project" })).toHaveCSS(
     "background-color",
     /oklch/,
@@ -174,45 +174,71 @@ test("preset rename, save, delete and compiler recovery", async ({ page }) => {
   await page.getByRole("button", { name: "Delete preset" }).click();
   await expect(
     page.getByLabel("Preset", { exact: true }).locator("option"),
-  ).toHaveCount(4);
+  ).toHaveCount(3);
 });
 
-test("preview dark mode changes only the demo and exports its selected mode", async ({
+test("light and dark previews stay stacked and both export offline", async ({
   page,
 }) => {
   await page.goto("/");
-  const editorBackground = await page
-    .locator(".color-panel")
-    .evaluate((el) => getComputedStyle(el).backgroundColor);
-  const frame = page.frameLocator("iframe");
-  await expect(frame.locator("main")).toHaveCSS(
+  const light = page.frameLocator('iframe[title="Tailwind light preview"]');
+  const dark = page.frameLocator('iframe[title="Tailwind dark preview"]');
+  await expect(light.locator("main")).toHaveCSS(
     "background-color",
     "oklch(0.985 0.002 180)",
   );
-  await page.getByRole("button", { name: "Dark mode", exact: true }).click();
-  await expect(frame.locator("html")).toHaveClass("dark");
-  await expect(frame.locator("main")).toHaveCSS(
+  await expect(dark.locator("main")).toHaveCSS(
     "background-color",
     "oklch(0.18 0.008 260)",
   );
-  await expect(frame.locator("html")).toHaveCSS("color-scheme", "dark");
-  await expect(page.locator(".color-panel")).toHaveCSS(
-    "background-color",
-    editorBackground,
-  );
-  await expect(
-    page.getByRole("button", { name: "Dark mode", exact: true }),
-  ).toHaveAttribute("aria-pressed", "true");
+  await expect(light.locator("html")).toHaveCSS("color-scheme", "light");
+  await expect(dark.locator("html")).toHaveCSS("color-scheme", "dark");
+  const lightBounds = await page
+    .getByTitle("Tailwind light preview", { exact: true })
+    .boundingBox();
+  const darkBounds = await page
+    .getByTitle("Tailwind dark preview", { exact: true })
+    .boundingBox();
+  expect(darkBounds!.x).toBe(lightBounds!.x);
+  expect(darkBounds!.y).toBeGreaterThan(lightBounds!.y + lightBounds!.height);
+  await page
+    .locator(".token")
+    .filter({ has: page.locator(".token-name", { hasText: /^primary$/ }) })
+    .click();
+  await page
+    .getByLabel("OKLCH value", { exact: true })
+    .fill("oklch(0.6 0.2 30)");
+  await page.getByRole("button", { name: "Apply color", exact: true }).click();
+  for (const frame of [light, dark])
+    await expect(frame.getByRole("button", { name: "Open project" })).toHaveCSS(
+      "background-color",
+      "oklch(0.6 0.2 30)",
+    );
   const downloading = page.waitForEvent("download");
   await page.getByRole("button", { name: "Export app" }).click();
-  const { readFile } = await import("node:fs/promises");
+  const { readFile, mkdtemp, writeFile, mkdir } =
+    await import("node:fs/promises");
+  const { tmpdir } = await import("node:os");
+  const { join, dirname } = await import("node:path");
+  const { pathToFileURL } = await import("node:url");
   const files = unzipSync(await readFile((await (await downloading).path())!));
-  expect(strFromU8(files["index.html"])).toContain('class="dark"');
-  expect(strFromU8(files["src/index.html"])).toContain('class="dark"');
-  expect(strFromU8(files["theme.css"])).toContain(".dark {");
-  await page.getByRole("button", { name: "Dark mode", exact: true }).click();
-  await expect(frame.locator("main")).toHaveCSS(
-    "background-color",
-    "oklch(0.985 0.002 180)",
-  );
+  const extracted = await mkdtemp(join(tmpdir(), "palette-pair-"));
+  for (const [name, data] of Object.entries(files)) {
+    const path = join(extracted, name);
+    await mkdir(dirname(path), { recursive: true });
+    await writeFile(path, data);
+  }
+  await page.context().setOffline(true);
+  for (const [name, background] of [
+    ["index.html", "oklch(0.985 0.002 180)"],
+    ["dark.html", "oklch(0.18 0.008 260)"],
+  ]) {
+    await page.goto(pathToFileURL(join(extracted, name)).href);
+    await expect(page.locator("main")).toHaveCSS(
+      "background-color",
+      background,
+    );
+    await page.getByRole("button", { name: "Save changes" }).click();
+    await expect(page.getByRole("status")).toHaveText("Settings saved");
+  }
 });

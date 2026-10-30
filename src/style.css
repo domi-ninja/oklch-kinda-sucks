@@ -484,3 +484,19 @@ select {
 .token-pair .token-value {
   grid-column: 1 / -1;
 }
+
+.iframe-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.preview-variant {
+  min-width: 0;
+}
+.preview-variant-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  text-align: left;
+}

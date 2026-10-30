@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useState } from "react";
 import { gzipSync, gunzipSync, strToU8, strFromU8 } from "fflate";
 import { z } from "zod";
+import { isRetiredPreset, sourceFor, baseTokens } from "./demo";
 export const pickerModes = ["RGB", "HSL", "HCL", "OKHCL"] as const;
 export type PickerMode = (typeof pickerModes)[number];
 const schema = z.object({
@@ -20,7 +21,6 @@ const schema = z.object({
   input: z.string(),
   format: z.enum(["css", "percent"]),
   tab: z.enum(["preview", "source", "compiled"]),
-  darkPreview: z.boolean(),
   width: z.enum(["100%", "375px", "768px"]),
   pickers: z.array(z.object({ id: z.string(), mode: z.enum(pickerModes) })),
 });
@@ -41,11 +41,28 @@ export function decodeWorkspace(hash: string): Workspace | null {
     const binary = atob(
       hash.slice(3).replaceAll("-", "+").replaceAll("_", "/"),
     );
-    return schema.parse(
+    const state = schema.parse(
       JSON.parse(
         strFromU8(gunzipSync(Uint8Array.from(binary, (c) => c.charCodeAt(0)))),
       ),
     );
+    const saved = state.saved.filter((p) => !isRetiredPreset(p));
+    if (saved.length === state.saved.length) return state;
+    const retired = state.saved.find(
+      (p) => p.id === state.active && isRetiredPreset(p),
+    );
+    return {
+      ...state,
+      saved,
+      ...(retired ? { active: "" } : {}),
+      ...(retired && state.source === retired.source
+        ? {
+            active: saved[0]?.id ?? "",
+            source: saved[0]?.source ?? sourceFor(baseTokens, ""),
+            selected: null,
+          }
+        : {}),
+    };
   } catch {
     return null;
   }
