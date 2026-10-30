@@ -4,3 +4,6 @@ test-results
 playwright-report
 *.local
 .deploy/
+
+# Local reference screenshots
+/Screenshot*.png
