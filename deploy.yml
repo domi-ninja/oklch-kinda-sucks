@@ -29,3 +29,5 @@ checks:
     - name: public color editor
       url: https://color.domi.ninja/
       expect_status: 200
+      attempts: 10
+      timeout_seconds: 60
