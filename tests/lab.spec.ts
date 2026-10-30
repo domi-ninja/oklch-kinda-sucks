@@ -129,3 +129,40 @@ test("mobile layout fits and sliders work with keyboard", async ({ page }) => {
     ),
   ).toBe(true);
 });
+
+test("preset rename, save, delete and compiler recovery", async ({ page }) => {
+  await page.goto("/");
+  page.once("dialog", (dialog) => dialog.accept("Temporary"));
+  await page.getByRole("button", { name: "Create preset" }).click();
+  page.once("dialog", (dialog) => dialog.accept("Renamed"));
+  await page.getByRole("button", { name: "Rename preset" }).click();
+  await expect(
+    page.getByLabel("Preset", { exact: true }).locator("option:checked"),
+  ).toHaveText("Renamed");
+  await page.getByRole("tab", { name: "Theme CSS", exact: true }).click();
+  await page
+    .getByLabel("Tailwind theme stylesheet")
+    .fill('@import "missing.css";');
+  await expect(page.getByRole("alert")).toContainText("Unsupported import");
+  await expect(page.getByRole("button", { name: "Export app" })).toBeDisabled();
+  await page
+    .getByLabel("Tailwind theme stylesheet")
+    .fill(
+      '@import "tailwindcss"; @theme { --color-primary: oklch(0.5 0.1 200); }',
+    );
+  await expect(page.getByRole("button", { name: "Export app" })).toBeEnabled();
+  await page.getByRole("button", { name: /^Save/ }).click();
+  await page.reload();
+  await page
+    .getByLabel("Preset", { exact: true })
+    .selectOption({ label: "Renamed" });
+  await page.getByRole("tab", { name: "Theme CSS", exact: true }).click();
+  await expect(page.getByLabel("Tailwind theme stylesheet")).toHaveValue(
+    /oklch\(0.5 0.1 200\)/,
+  );
+  page.once("dialog", (dialog) => dialog.accept());
+  await page.getByRole("button", { name: "Delete preset" }).click();
+  await expect(
+    page.getByLabel("Preset", { exact: true }).locator("option"),
+  ).toHaveCount(4);
+});
