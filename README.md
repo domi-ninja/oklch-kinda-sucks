@@ -13,6 +13,10 @@ pnpm dev
 
 Open the local URL printed by Vite. Pick a theme color, adjust the plane or sliders, and see the component preview update. Save a preset to keep it in this browser. Export CSS for the compiled stylesheet or export the app for a ZIP you can open offline.
 
+Use Add picker to open synchronized RGB, HSL, HCL, or OKHCL panels. Each panel has its own mode selector and close button. HCL uses CIELCH D50; OKHCL uses OKLCH. RGB and HSL controls use the browser's sRGB result.
+
+The URL updates with every workspace edit. Copy it to restore picker panels, the shared color, selected theme color, unsaved CSS, presets, color format, preview width, tab, and dark mode on another browser. Presets also save locally when you press Save.
+
 The ZIP contains a standalone `index.html`, compiled `styles.css`, editable `theme.css`, and a rebuildable demo in `src/index.html`. Run `npm install && npm run build` in the extracted folder to rebuild the CSS after editing the theme.
 
 ## Color formats

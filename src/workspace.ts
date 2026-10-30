@@ -26,7 +26,11 @@ const schema = z.object({
 });
 export type Workspace = z.infer<typeof schema>;
 export function encodeWorkspace(state: Workspace) {
-  return btoa(String.fromCharCode(...gzipSync(strToU8(JSON.stringify(state)))))
+  const bytes = gzipSync(strToU8(JSON.stringify(state)), { mtime: 0 });
+  let binary = "";
+  for (let i = 0; i < bytes.length; i += 8192)
+    binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
+  return btoa(binary)
     .replaceAll("+", "-")
     .replaceAll("/", "_")
     .replace(/=+$/, "");

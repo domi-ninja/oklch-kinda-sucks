@@ -148,7 +148,7 @@ export function Picker({
       ))}
       <div className="picker-expression">
         {coordinateCss(
-          values.map((n) => round(n, 3)) as Coordinates,
+          [round(values[0], 3), round(values[1], 3), round(values[2], 3)],
           mode,
           round(color.a),
         )}
