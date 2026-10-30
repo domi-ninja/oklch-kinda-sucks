@@ -79,7 +79,19 @@ export function Picker({
       change: (a: number) => onChange({ ...color, a }),
       paint: (a: number) => cssColor({ ...color, a }),
     },
-  ];
+  ].map((dimension) => {
+    if (mode !== "OKHCL") return dimension;
+    const scale = 100 / dimension.max;
+    return {
+      ...dimension,
+      max: 100,
+      step: 0.1,
+      unit: "%",
+      value: dimension.value * scale,
+      change: (value: number) => dimension.change(value / scale),
+      paint: (value: number) => dimension.paint(value / scale),
+    };
+  });
   return (
     <div className="picker">
       <div

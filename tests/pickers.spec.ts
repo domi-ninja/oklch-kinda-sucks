@@ -179,3 +179,73 @@ test("URL navigation restores picker modes and malformed state falls back safely
   );
   expect(decodeWorkspace(new URL(page.url()).hash)).not.toBeNull();
 });
+
+test("OKHCL percentages control native color coordinates and survive URL restoration", async ({
+  page,
+}) => {
+  await page.goto("/");
+  for (const name of ["Hue", "Chroma", "Lightness", "Alpha"]) {
+    await expect(
+      page.getByRole("slider", { name, exact: true }),
+    ).toHaveAttribute("max", "100");
+    await expect(
+      page
+        .getByRole("spinbutton", { name: `${name} value`, exact: true })
+        .locator(".."),
+    ).toContainText("%");
+  }
+  await expect(
+    page.getByRole("spinbutton", { name: "Lightness value", exact: true }),
+  ).toHaveValue("94.03");
+  await expect(
+    page.getByRole("spinbutton", { name: "Chroma value", exact: true }),
+  ).toHaveValue("25");
+  await page
+    .getByRole("spinbutton", { name: "Hue value", exact: true })
+    .fill("50");
+  await page
+    .getByRole("spinbutton", { name: "Chroma value", exact: true })
+    .fill("60");
+  await page
+    .getByRole("spinbutton", { name: "Lightness value", exact: true })
+    .fill("70");
+  await page
+    .getByRole("spinbutton", { name: "Alpha value", exact: true })
+    .fill("50");
+  await expect(page.getByLabel("OKLCH value", { exact: true })).toHaveValue(
+    "oklch(0.7 0.24 180 / 50%)",
+  );
+  await page.getByRole("slider", { name: "Hue", exact: true }).focus();
+  await page
+    .getByRole("slider", { name: "Hue", exact: true })
+    .press("ArrowRight");
+  await expect(
+    page.getByRole("spinbutton", { name: "Hue value", exact: true }),
+  ).toHaveValue("50.1");
+  expect(decodeWorkspace(new URL(page.url()).hash)?.color.h).toBeCloseTo(
+    180.36,
+  );
+  await page.reload();
+  await expect(
+    page.getByRole("spinbutton", { name: "Hue value", exact: true }),
+  ).toHaveValue("50.1");
+  await expect(
+    page.getByRole("spinbutton", { name: "Chroma value", exact: true }),
+  ).toHaveValue("60");
+  await expect(
+    page.getByRole("spinbutton", { name: "Lightness value", exact: true }),
+  ).toHaveValue("70");
+  await expect(
+    page.getByRole("spinbutton", { name: "Alpha value", exact: true }),
+  ).toHaveValue("50");
+  await page.getByLabel("Picker mode", { exact: true }).selectOption("HCL");
+  await expect(
+    page
+      .getByRole("spinbutton", { name: "Hue value", exact: true })
+      .locator(".."),
+  ).toContainText("°");
+  await page.getByLabel("Picker mode", { exact: true }).selectOption("OKHCL");
+  await expect(
+    page.getByRole("spinbutton", { name: "Hue value", exact: true }),
+  ).toHaveValue("50.1");
+});
