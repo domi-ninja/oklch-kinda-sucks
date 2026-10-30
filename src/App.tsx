@@ -129,6 +129,26 @@ export function App() {
       })),
     [source],
   );
+  const pairedEntries = useMemo(() => {
+    const groups = new Map<
+      string,
+      { entry: (typeof entries)[number]; index: number }[]
+    >();
+    entries.forEach((entry, index) => {
+      const name = entry.name.replace(/^dark \/ /, "");
+      const group = groups.get(name) ?? [];
+      group.push({ entry, index });
+      groups.set(name, group);
+    });
+    return [...groups.entries()].map(([name, colors]) => ({
+      name,
+      colors: colors.sort(
+        (a, b) =>
+          Number(a.entry.name.startsWith("dark / ")) -
+          Number(b.entry.name.startsWith("dark / ")),
+      ),
+    }));
+  }, [entries]);
   const sample = useMemo(() => {
     try {
       return sampleColor(cssColor(color));
@@ -479,36 +499,43 @@ export function App() {
               <span className="muted">{entries.length} colors</span>
             </div>
             <div className="token-list">
-              {entries.map((entry, i) => (
-                <button
-                  key={i}
-                  className={`token ${selected === i ? "selected" : ""}`}
-                  onClick={() => {
-                    const next = parseColor(entry.value);
-                    if (!next) {
-                      setMessage(
-                        "This expression cannot be edited with sliders. Edit it in the stylesheet.",
-                      );
-                      return;
-                    }
-                    set("selected", i);
-                    set("color", next);
-                    set(
-                      "input",
-                      format === "css" ? cssColor(next) : percentColor(next),
-                    );
-                  }}
-                >
-                  <span className="token-swatch checker">
-                    <span style={{ background: entry.value }} />
-                  </span>
-                  <span className="token-name">
-                    {entry.name.replace(/^color-/, "")}
-                  </span>
-                  <span className="token-value">
-                    {entry.value.replace("oklch(", "").replace(")", "")}
-                  </span>
-                </button>
+              {pairedEntries.map((group) => (
+                <div className="token-pair" key={group.name}>
+                  {group.colors.map(({ entry, index: i }) => (
+                    <button
+                      key={i}
+                      title={entry.name}
+                      className={`token ${selected === i ? "selected" : ""}`}
+                      onClick={() => {
+                        const next = parseColor(entry.value);
+                        if (!next) {
+                          setMessage(
+                            "This expression cannot be edited with sliders. Edit it in the stylesheet.",
+                          );
+                          return;
+                        }
+                        set("selected", i);
+                        set("color", next);
+                        set(
+                          "input",
+                          format === "css"
+                            ? cssColor(next)
+                            : percentColor(next),
+                        );
+                      }}
+                    >
+                      <span className="token-swatch checker">
+                        <span style={{ background: entry.value }} />
+                      </span>
+                      <span className="token-name">
+                        {entry.name.replace(/^color-/, "")}
+                      </span>
+                      <span className="token-value">
+                        {entry.value.replace("oklch(", "").replace(")", "")}
+                      </span>
+                    </button>
+                  ))}
+                </div>
               ))}
             </div>
           </section>

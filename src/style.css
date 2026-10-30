@@ -454,3 +454,33 @@ select {
   font-size: 11px;
   overflow-wrap: anywhere;
 }
+
+.token-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.token-pair > .token {
+  padding: 4px 8px;
+  grid-template-columns: 20px minmax(0, 1fr);
+  column-gap: 6px;
+}
+.token-pair > .token:only-child {
+  grid-column: 1 / -1;
+}
+.token-pair > .token + .token {
+  border-left: 1px solid #9d9d9d;
+}
+.token-pair .token-swatch {
+  width: 20px;
+  height: 20px;
+  grid-row: auto;
+}
+.token-pair .token-name {
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.token-pair .token-value {
+  grid-column: 1 / -1;
+}
