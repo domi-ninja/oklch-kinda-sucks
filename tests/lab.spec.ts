@@ -105,8 +105,18 @@ test("theme edits compile, presets persist, and exported app works offline", asy
   const files = unzipSync(await readFile(path!));
   expect(Object.keys(files)).toContain("styles.css");
   expect(strFromU8(files["theme.css"])).toContain("oklch(0.5 0.1 200)");
-  await page.goto("about:blank");
-  await page.setContent(strFromU8(files["index.html"]));
+  const { mkdtemp, writeFile, mkdir } = await import("node:fs/promises");
+  const { tmpdir } = await import("node:os");
+  const { join, dirname } = await import("node:path");
+  const { pathToFileURL } = await import("node:url");
+  const extracted = await mkdtemp(join(tmpdir(), "palette-test-"));
+  for (const [name, data] of Object.entries(files)) {
+    const target = join(extracted, name);
+    await mkdir(dirname(target), { recursive: true });
+    await writeFile(target, data);
+  }
+  await page.context().setOffline(true);
+  await page.goto(pathToFileURL(join(extracted, "index.html")).href);
   await expect(page.getByRole("button", { name: "Open project" })).toHaveCSS(
     "background-color",
     "oklch(0.5 0.1 200)",

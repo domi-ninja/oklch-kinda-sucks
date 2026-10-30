@@ -8,8 +8,11 @@ export const demoBody = `<main class="min-h-screen bg-background text-foreground
   </div>
 </main>`;
 export const demoScript = `document.getElementById('save').onclick=()=>document.getElementById('status').textContent='Settings saved';document.getElementById('project').onclick=()=>document.getElementById('status').textContent='Project opened';document.getElementById('archive').onclick=()=>document.getElementById('status').textContent='Project archived';document.getElementById('remove').onclick=()=>document.getElementById('status').textContent='Member removed';`;
-export function demoDocument(css: string) {
-  return `<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Palette studio preview</title><style>${css.replace(/<\/style/gi, "<\\/style")}</style></head><body>${demoBody}<script>${demoScript}</script></body></html>`;
+export function demoDocument(css: string, externalStylesheet = false) {
+  const styles = externalStylesheet
+    ? '<link rel="stylesheet" href="./styles.css">'
+    : `<style>${css.replace(/<\/style/gi, "<\\/style")}</style>`;
+  return `<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Palette studio preview</title>${styles}</head><body>${demoBody}<script>${demoScript}</script></body></html>`;
 }
 export const candidates = [
   ...new Set(

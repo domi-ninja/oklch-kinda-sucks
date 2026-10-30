@@ -46,14 +46,15 @@ h2 {
 }
 .workspace {
   display: grid;
-  grid-template-columns: 340px 310px minmax(0, 1fr);
+  grid-template-columns: 340px 310px minmax(360px, 1fr);
   gap: 16px;
   padding: 24px;
-  max-width: 1920px;
-  margin: auto;
+  width: 100%;
+  overflow-x: auto;
   align-items: start;
 }
-.left-column {
+.left-column,
+.theme-column {
   display: grid;
   gap: 16px;
   min-width: 0;
@@ -411,45 +412,23 @@ footer {
 }
 @media (min-width: 1600px) {
   .workspace {
-    grid-template-columns: 360px 340px minmax(0, 1fr);
+    grid-template-columns: 360px 340px minmax(360px, 1fr);
   }
   .plane {
     height: 250px;
   }
 }
-@media (max-width: 1200px) {
+@media (max-width: 1100px) {
   .workspace {
-    grid-template-columns: 320px minmax(0, 1fr);
-  }
-  .theme-panel {
-    grid-column: 1;
+    grid-template-columns: 340px minmax(310px, 1fr);
   }
   .preview-panel {
-    grid-column: 2;
-    grid-row: 1 / span 2;
-  }
-  .token-list {
-    max-height: 380px;
+    grid-column: 1 / -1;
   }
 }
 @media (max-width: 760px) {
-  :root {
-    font-size: 13px;
-  }
   .workspace {
-    display: flex;
-    flex-direction: column;
     padding: 16px;
-  }
-  .left-column,
-  .panel {
-    width: 100%;
-  }
-  .theme-panel .token-list {
-    max-height: 300px;
-  }
-  .plane {
-    height: 230px;
   }
   input:not([type="range"]),
   select,
@@ -459,17 +438,8 @@ footer {
   .value-field input {
     font-size: 12px;
   }
-  .export-bar {
-    flex-wrap: wrap;
-  }
   footer {
     padding: 8px 16px 16px;
     flex-wrap: wrap;
-  }
-  .tabs {
-    gap: 12px;
-  }
-  .iframe-wrap {
-    padding: 8px;
   }
 }

@@ -167,7 +167,7 @@ export function App() {
   };
   const exportApp = () => {
     const files = {
-      "index.html": strToU8(demoDocument(compiled.css)),
+      "index.html": strToU8(demoDocument(compiled.css, true)),
       "styles.css": strToU8(compiled.css),
       "theme.css": strToU8(source),
       "src/index.html": strToU8(
@@ -304,6 +304,8 @@ export function App() {
               Copy CSS
             </Button>
           </section>
+        </aside>
+        <div className="theme-column">
           <section className="panel">
             <div className="panel-heading">
               <h2>Presets</h2>
@@ -399,45 +401,45 @@ export function App() {
               </Button>
             </div>
           </section>
-        </aside>
-        <section className="panel theme-panel">
-          <div className="panel-heading">
-            <h2>Tailwind theme</h2>
-            <span className="muted">{entries.length} colors</span>
-          </div>
-          <div className="token-list">
-            {entries.map((entry, i) => (
-              <button
-                key={i}
-                className={`token ${selected === i ? "selected" : ""}`}
-                onClick={() => {
-                  const next = parseColor(entry.value);
-                  if (!next) {
-                    setMessage(
-                      "This expression cannot be edited with sliders. Edit it in the stylesheet.",
+          <section className="panel theme-panel">
+            <div className="panel-heading">
+              <h2>Tailwind theme</h2>
+              <span className="muted">{entries.length} colors</span>
+            </div>
+            <div className="token-list">
+              {entries.map((entry, i) => (
+                <button
+                  key={i}
+                  className={`token ${selected === i ? "selected" : ""}`}
+                  onClick={() => {
+                    const next = parseColor(entry.value);
+                    if (!next) {
+                      setMessage(
+                        "This expression cannot be edited with sliders. Edit it in the stylesheet.",
+                      );
+                      return;
+                    }
+                    setSelected(i);
+                    setColor(next);
+                    setInput(
+                      format === "css" ? cssColor(next) : percentColor(next),
                     );
-                    return;
-                  }
-                  setSelected(i);
-                  setColor(next);
-                  setInput(
-                    format === "css" ? cssColor(next) : percentColor(next),
-                  );
-                }}
-              >
-                <span className="token-swatch checker">
-                  <span style={{ background: entry.value }} />
-                </span>
-                <span className="token-name">
-                  {entry.name.replace(/^color-/, "")}
-                </span>
-                <span className="token-value">
-                  {entry.value.replace("oklch(", "").replace(")", "")}
-                </span>
-              </button>
-            ))}
-          </div>
-        </section>
+                  }}
+                >
+                  <span className="token-swatch checker">
+                    <span style={{ background: entry.value }} />
+                  </span>
+                  <span className="token-name">
+                    {entry.name.replace(/^color-/, "")}
+                  </span>
+                  <span className="token-value">
+                    {entry.value.replace("oklch(", "").replace(")", "")}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </section>
+        </div>
         <section className="panel preview-panel">
           <div className="panel-heading preview-heading">
             <div className="tabs" role="tablist" aria-label="Preview views">
