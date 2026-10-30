@@ -394,13 +394,6 @@ select {
   padding: 8px 16px;
   font-size: 11px;
 }
-footer {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 8px 28px 24px;
-  color: #414141;
-}
 .skip {
   position: fixed;
   top: -100px;
@@ -438,10 +431,6 @@ footer {
   }
   .value-field input {
     font-size: 12px;
-  }
-  footer {
-    padding: 8px 16px 16px;
-    flex-wrap: wrap;
   }
 }
 

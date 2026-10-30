@@ -219,6 +219,7 @@ export function App() {
           }}
         >
           <div className="picker-toolbar">
+            {message && <span role="status">{message}</span>}
             <Button
               variant="outline"
               onClick={() =>
@@ -636,15 +637,6 @@ export function App() {
           </div>
         </section>
       </main>
-      <footer>
-        <span>OKLCH kinda sucks.</span>
-        <span aria-live="polite">
-          {message ||
-            (format === "percent"
-              ? "Editor % normalizes hue. Copy CSS exports degrees."
-              : "Browser rendering. Local presets.")}
-        </span>
-      </footer>
     </>
   );
 }
