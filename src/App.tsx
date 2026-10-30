@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState } from "react";
 import {
   ArrowDownToLine,
   Check,
@@ -8,6 +8,7 @@ import {
   Trash2,
   Pencil,
   ExternalLink,
+  X,
 } from "lucide-react";
 import { zipSync, strToU8 } from "fflate";
 import { Button } from "./components/ui/button";
@@ -28,6 +29,7 @@ import {
   sourceFor,
   withDarkTheme,
 } from "./demo";
+import { useWorkspace, pickerModes, type Workspace } from "./workspace";
 import { useCompiler } from "./useCompiler";
 
 type Saved = { id: string; name: string; source: string };
@@ -76,19 +78,41 @@ function startingColor() {
   }
   return initialColor;
 }
+function initialWorkspace(): Workspace {
+  const saved = loadPresets();
+  const color = startingColor();
+  return {
+    version: 1,
+    saved,
+    active: saved[0]?.id ?? "",
+    source: saved[0]?.source ?? defaults[0].source,
+    color,
+    selected: null,
+    input: cssColor(color),
+    format: "css",
+    tab: "preview",
+    darkPreview: false,
+    width: "100%",
+    pickers: [{ id: "initial", mode: "OKHCL" }],
+  };
+}
 export function App() {
-  const [saved, setSaved] = useState(loadPresets);
-  const [active, setActive] = useState(saved[0]?.id ?? "");
-  const [source, setSource] = useState(saved[0]?.source ?? defaults[0].source);
-  const [color, setColor] = useState<Color>(startingColor);
-  const [selected, setSelected] = useState<number | null>(null);
-  const [input, setInput] = useState(cssColor(color));
-  const [format, setFormat] = useState<"css" | "percent">("css");
+  const { state, set } = useWorkspace(initialWorkspace);
+  const {
+    saved,
+    active,
+    source,
+    color,
+    selected,
+    input,
+    format,
+    tab,
+    darkPreview,
+    width,
+    pickers,
+  } = state;
   const [message, setMessage] = useState("");
   const [inputError, setInputError] = useState("");
-  const [tab, setTab] = useState<"preview" | "source" | "compiled">("preview");
-  const [darkPreview, setDarkPreview] = useState(false);
-  const [width, setWidth] = useState("100%");
   const compiled = useCompiler(source);
   const entries = useMemo(
     () =>
@@ -113,48 +137,24 @@ export function App() {
     }
   }, [color]);
   const dirty = source !== saved.find((p) => p.id === active)?.source;
-  useEffect(
-    function protectUnsavedTheme() {
-      if (!dirty) return;
-      const handler = (event: BeforeUnloadEvent) => event.preventDefault();
-      window.addEventListener("beforeunload", handler);
-      return () => window.removeEventListener("beforeunload", handler);
-    },
-    [dirty],
-  );
   const update = (next: Color) => {
-    setColor(next);
-    setInput(format === "css" ? cssColor(next) : percentColor(next));
+    set("color", next);
+    set("input", format === "css" ? cssColor(next) : percentColor(next));
     setInputError("");
     if (selected !== null && entries[selected]) {
       const entry = entries[selected];
-      setSource(
+      set(
+        "source",
         source.slice(0, entry.index) +
           cssColor(next) +
           source.slice(entry.index + entry.value.length),
       );
     }
-    history.replaceState(
-      null,
-      "",
-      `#${next.l},${next.c},${next.h},${next.a * 100}`,
-    );
   };
-  useEffect(function restoreHash() {
-    const handler = () => {
-      const next = startingColor();
-      setColor(next);
-      setInput(cssColor(next));
-      setSelected(null);
-      setFormat("css");
-    };
-    window.addEventListener("hashchange", handler);
-    return () => window.removeEventListener("hashchange", handler);
-  }, []);
   const persist = (next: Saved[]) => {
     try {
       localStorage.setItem("oklch-presets", JSON.stringify(next));
-      setSaved(next);
+      set("saved", next);
       return true;
     } catch {
       setMessage("Browser storage is full or unavailable");
@@ -165,9 +165,9 @@ export function App() {
     const p = saved.find((p) => p.id === id);
     if (!p) return;
     if (dirty && !confirm("Discard unsaved preset changes?")) return;
-    setActive(id);
-    setSource(p.source);
-    setSelected(null);
+    set("active", id);
+    set("source", p.source);
+    set("selected", null);
   };
   const copy = async (text: string) => {
     try {
@@ -212,110 +212,169 @@ export function App() {
         Skip to workspace
       </a>
       <main id="workspace" className="workspace">
-        <aside className="left-column">
-          <section className="panel color-panel">
-            <div className="panel-heading">
-              <h2>Color</h2>
-              <button
-                onClick={() => {
-                  setSelected(null);
-                  setMessage("Picker detached from theme");
-                }}
-                className="text-button"
-              >
-                {selected !== null
-                  ? entries[selected]?.name.replace("color-", "")
-                  : "Free pick"}
-              </button>
-            </div>
-            <Picker color={color} onChange={update} />
-            <div className="swatches">
-              <div className="checker">
-                <div style={{ background: cssColor(color) }}>
-                  <span>CSS / display</span>
-                </div>
-              </div>
-              <div className="checker">
-                <div style={{ background: sample?.rgb }}>
-                  <span>Canvas / sRGB</span>
-                </div>
-              </div>
-            </div>
-            <div className="format-switch">
-              <button
-                aria-pressed={format === "css"}
-                onClick={() => {
-                  setFormat("css");
-                  setInput(cssColor(color));
-                }}
-              >
-                CSS
-              </button>
-              <button
-                aria-pressed={format === "percent"}
-                onClick={() => {
-                  setFormat("percent");
-                  setInput(percentColor(color));
-                }}
-              >
-                Editor %
-              </button>
-            </div>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                const parsed = parseColor(input);
-                if (parsed) update(parsed);
-                else
-                  setInputError(
-                    "Enter OKLCH with L 0–1, C 0–0.4, hue in degrees, or editor percentages.",
-                  );
-              }}
-            >
-              <div className="value-field">
-                <input
-                  aria-label="OKLCH value"
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  spellCheck={false}
-                />
-                <button aria-label="Apply color" type="submit">
-                  <Check size={16} />
-                </button>
-              </div>
-              {inputError && (
-                <p role="alert" className="error">
-                  {inputError}
-                </p>
-              )}
-            </form>
-            <div className="output-row">
-              <span>{sample?.hex ?? "Canvas unavailable"}</span>
-              <button
-                aria-label="Copy hex"
-                onClick={() => sample && copy(sample.hex)}
-              >
-                <Copy size={15} />
-              </button>
-            </div>
-            <div className="output-row">
-              <span>{sample?.rgb}</span>
-              <button
-                aria-label="Copy RGB"
-                onClick={() => sample && copy(sample.rgb)}
-              >
-                <Copy size={15} />
-              </button>
-            </div>
+        <aside
+          className="left-column"
+          style={{
+            gridTemplateColumns: `repeat(${Math.max(1, pickers.length)}, 340px)`,
+          }}
+        >
+          <div className="picker-toolbar">
             <Button
               variant="outline"
-              className="w-full"
-              onClick={() => copy(cssColor(color))}
+              onClick={() =>
+                set("pickers", [
+                  ...pickers,
+                  { id: crypto.randomUUID(), mode: "OKHCL" },
+                ])
+              }
             >
-              <Copy size={15} />
-              Copy CSS
+              <Plus size={15} />
+              Add picker
             </Button>
-          </section>
+          </div>
+          {pickers.map((panel, panelIndex) => (
+            <section
+              className="panel color-panel"
+              key={panel.id}
+              aria-label={`Color picker ${panel.mode} ${panelIndex + 1}`}
+            >
+              <div className="picker-panel-heading">
+                <select
+                  aria-label="Picker mode"
+                  value={panel.mode}
+                  onChange={(e) => {
+                    const mode = pickerModes.find(
+                      (mode) => mode === e.target.value,
+                    );
+                    if (mode)
+                      set(
+                        "pickers",
+                        pickers.map((p) =>
+                          p.id === panel.id ? { ...p, mode } : p,
+                        ),
+                      );
+                  }}
+                >
+                  {pickerModes.map((mode) => (
+                    <option key={mode}>{mode}</option>
+                  ))}
+                </select>
+                <Button
+                  variant="ghost"
+                  aria-label="Close picker"
+                  onClick={() =>
+                    set(
+                      "pickers",
+                      pickers.filter((p) => p.id !== panel.id),
+                    )
+                  }
+                >
+                  <X size={15} />
+                </Button>
+              </div>
+              <div className="panel-heading">
+                <h2>Color</h2>
+                <button
+                  onClick={() => {
+                    set("selected", null);
+                    setMessage("Picker detached from theme");
+                  }}
+                  className="text-button"
+                >
+                  {selected !== null
+                    ? entries[selected]?.name.replace("color-", "")
+                    : "Free pick"}
+                </button>
+              </div>
+              <Picker color={color} mode={panel.mode} onChange={update} />
+              <div className="swatches">
+                <div className="checker">
+                  <div style={{ background: cssColor(color) }}>
+                    <span>CSS / display</span>
+                  </div>
+                </div>
+                <div className="checker">
+                  <div style={{ background: sample?.rgb }}>
+                    <span>Canvas / sRGB</span>
+                  </div>
+                </div>
+              </div>
+              <div className="format-switch">
+                <button
+                  aria-pressed={format === "css"}
+                  onClick={() => {
+                    set("format", "css");
+                    set("input", cssColor(color));
+                  }}
+                >
+                  CSS
+                </button>
+                <button
+                  aria-pressed={format === "percent"}
+                  onClick={() => {
+                    set("format", "percent");
+                    set("input", percentColor(color));
+                  }}
+                >
+                  Editor %
+                </button>
+              </div>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const parsed = parseColor(input);
+                  if (parsed) update(parsed);
+                  else
+                    setInputError(
+                      "Enter OKLCH with L 0–1, C 0–0.4, hue in degrees, or editor percentages.",
+                    );
+                }}
+              >
+                <div className="value-field">
+                  <input
+                    aria-label="OKLCH value"
+                    value={input}
+                    onChange={(e) => set("input", e.target.value)}
+                    spellCheck={false}
+                  />
+                  <button aria-label="Apply color" type="submit">
+                    <Check size={16} />
+                  </button>
+                </div>
+                {inputError && (
+                  <p role="alert" className="error">
+                    {inputError}
+                  </p>
+                )}
+              </form>
+              <div className="output-row">
+                <span>{sample?.hex ?? "Canvas unavailable"}</span>
+                <button
+                  aria-label="Copy hex"
+                  onClick={() => sample && copy(sample.hex)}
+                >
+                  <Copy size={15} />
+                </button>
+              </div>
+              <div className="output-row">
+                <span>{sample?.rgb}</span>
+                <button
+                  aria-label="Copy RGB"
+                  onClick={() => sample && copy(sample.rgb)}
+                >
+                  <Copy size={15} />
+                </button>
+              </div>
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => copy(cssColor(color))}
+              >
+                <Copy size={15} />
+                Copy CSS
+              </Button>
+            </section>
+          ))}
         </aside>
         <div className="theme-column">
           <section className="panel">
@@ -333,7 +392,7 @@ export function App() {
                     source,
                   };
                   if (persist([...saved, p])) {
-                    setActive(p.id);
+                    set("active", p.id);
                     setMessage("Preset created");
                   }
                 }}
@@ -403,9 +462,9 @@ export function App() {
                   if (!confirm("Delete this preset?")) return;
                   const next = saved.filter((p) => p.id !== active);
                   if (persist(next)) {
-                    setActive(next[0]?.id ?? "");
-                    setSource(next[0]?.source ?? defaults[0].source);
-                    setSelected(null);
+                    set("active", next[0]?.id ?? "");
+                    set("source", next[0]?.source ?? defaults[0].source);
+                    set("selected", null);
                   }
                 }}
               >
@@ -431,9 +490,10 @@ export function App() {
                       );
                       return;
                     }
-                    setSelected(i);
-                    setColor(next);
-                    setInput(
+                    set("selected", i);
+                    set("color", next);
+                    set(
+                      "input",
                       format === "css" ? cssColor(next) : percentColor(next),
                     );
                   }}
@@ -460,7 +520,7 @@ export function App() {
                   key={value}
                   role="tab"
                   aria-selected={tab === value}
-                  onClick={() => setTab(value)}
+                  onClick={() => set("tab", value)}
                 >
                   {value === "preview"
                     ? "Preview"
@@ -490,14 +550,16 @@ export function App() {
                 <Button
                   variant={darkPreview ? "default" : "outline"}
                   aria-pressed={darkPreview}
-                  onClick={() => setDarkPreview(!darkPreview)}
+                  onClick={() => set("darkPreview", !darkPreview)}
                 >
                   Dark mode
                 </Button>
                 <select
                   aria-label="Preview width"
                   value={width}
-                  onChange={(e) => setWidth(e.target.value)}
+                  onChange={(e) =>
+                    set("width", e.target.value as Workspace["width"])
+                  }
                 >
                   <option value="100%">Responsive</option>
                   <option value="375px">375px</option>
@@ -542,8 +604,8 @@ export function App() {
               spellCheck={false}
               value={source}
               onChange={(e) => {
-                setSource(e.target.value);
-                setSelected(null);
+                set("source", e.target.value);
+                set("selected", null);
               }}
             />
           )}

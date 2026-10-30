@@ -46,7 +46,7 @@ h2 {
 }
 .workspace {
   display: grid;
-  grid-template-columns: 340px 310px minmax(360px, 1fr);
+  grid-template-columns: max-content 310px minmax(360px, 1fr);
   gap: 16px;
   padding: 24px;
   width: 100%;
@@ -412,7 +412,7 @@ footer {
 }
 @media (min-width: 1600px) {
   .workspace {
-    grid-template-columns: 360px 340px minmax(360px, 1fr);
+    grid-template-columns: max-content 340px minmax(360px, 1fr);
   }
   .plane {
     height: 250px;
@@ -420,7 +420,7 @@ footer {
 }
 @media (max-width: 1100px) {
   .workspace {
-    grid-template-columns: 340px minmax(310px, 1fr);
+    grid-template-columns: max-content minmax(310px, 1fr);
   }
   .preview-panel {
     grid-column: 1 / -1;
@@ -442,4 +442,25 @@ footer {
     padding: 8px 16px 16px;
     flex-wrap: wrap;
   }
+}
+
+.left-column {
+  align-items: start;
+}
+.picker-toolbar {
+  grid-column: 1 / -1;
+}
+.picker-panel-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px 0;
+}
+.picker-panel-heading select {
+  width: 110px;
+}
+.picker-expression {
+  padding: 0 0 16px;
+  font-size: 11px;
+  overflow-wrap: anywhere;
 }
