@@ -277,12 +277,13 @@ select {
 }
 .token {
   display: grid;
-  grid-template-columns: 30px minmax(0, 1fr);
+  grid-template-columns: 24px minmax(0, 1fr);
   width: 100%;
   text-align: left;
-  padding: 14px 16px;
+  padding: 4px 12px;
+  min-height: 44px;
   border-bottom: 1px solid #9d9d9d;
-  column-gap: 12px;
+  column-gap: 8px;
   align-items: center;
 }
 .token:hover {
@@ -294,8 +295,8 @@ select {
 }
 .token-swatch {
   grid-row: span 2;
-  width: 30px;
-  height: 30px;
+  width: 24px;
+  height: 24px;
   border: 1px solid #0001;
   border-radius: 4px;
   overflow: hidden;
@@ -311,7 +312,7 @@ select {
   font-size: 10px;
   color: #414141;
   overflow-wrap: anywhere;
-  margin-top: 4px;
+  margin-top: 0;
 }
 .tabs {
   display: flex;
