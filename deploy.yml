@@ -1,0 +1,31 @@
+version: 1
+project:
+  name: color-domi-ninja
+  environment: prod
+build:
+  context: .
+  dockerfile: Dockerfile
+  tags: ["localhost/color-domi-ninja:${release}"]
+hosts:
+  p3:
+    ssh: root@p3.domi.ninja
+    roles: [web]
+services:
+  web:
+    image: "localhost/color-domi-ninja:${release}"
+    hosts: [p3]
+    ports:
+      - host_ip: 127.0.0.1
+        published: auto
+        target: 80
+    health:
+      command: ["wget", "-q", "--spider", "http://127.0.0.1/"]
+      timeout_seconds: 60
+routes:
+  - host: color.domi.ninja
+    service: web
+checks:
+  smoke:
+    - name: public color editor
+      url: https://color.domi.ninja/
+      expect_status: 200

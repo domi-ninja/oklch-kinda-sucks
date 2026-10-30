@@ -2,7 +2,11 @@
 
 An OKLCH picker and Tailwind theme editor that uses the current browser to render colors.
 
-## Run it
+![Synchronized HSL, HCL, and OKHCL pickers beside a Tailwind theme](public/cover.png)
+
+Open [color.domi.ninja](https://color.domi.ninja), select a theme color, and adjust it with any picker. Add more pickers to compare color spaces. Light and dark previews update together. Copy the URL to share the whole workspace.
+
+## Run locally
 
 Use Node 22.12+ and pnpm.
 
@@ -40,3 +44,7 @@ pnpm test
 ```
 
 Tests cover browser canvas output, alpha, out-of-gamut colors, keyboard sliders, mobile overflow, live compilation, browser presets, and offline exports in Chromium, Firefox, and WebKit.
+
+## Deploy
+
+`pp plan` validates `deploy.yml`. `pp deploy` builds the static app into an nginx container and deploys it to color.domi.ninja. Deployment state stays in the ignored `.deploy/` directory.
