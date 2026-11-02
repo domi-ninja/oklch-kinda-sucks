@@ -98,9 +98,14 @@ test("theme edits compile, presets persist, and exported app works offline", asy
     "border-radius",
     "32px",
   );
+  await page.clock.setFixedTime(new Date("2026-11-02T12:34:56.789Z"));
   const downloading = page.waitForEvent("download");
   await page.getByRole("button", { name: "Export app" }).click();
-  const path = await (await downloading).path();
+  const downloaded = await downloading;
+  expect(downloaded.suggestedFilename()).toBe(
+    "my-palette-2026-11-02T12-34-56-789Z.zip",
+  );
+  const path = await downloaded.path();
   const { readFile } = await import("node:fs/promises");
   const files = unzipSync(await readFile(path!));
   expect(Object.keys(files)).toContain("styles.css");

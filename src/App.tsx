@@ -233,8 +233,15 @@ export function App() {
         ),
       ),
     };
+    const presetName =
+      (saved.find((preset) => preset.id === active)?.name ?? "custom-theme")
+        .normalize("NFKC")
+        .toLowerCase()
+        .replace(/[^\p{L}\p{N}]+/gu, "-")
+        .replace(/^-+|-+$/g, "") || "custom-theme";
+    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
     download(
-      "palette-studio.zip",
+      `${presetName}-${timestamp}.zip`,
       zipSync(files) as Uint8Array<ArrayBuffer>,
       "application/zip",
     );
