@@ -4,11 +4,11 @@ An OKLCH picker and Tailwind theme editor that uses the current browser to rende
 
 ![Synchronized HSL, HCL, and OKHCL pickers beside a Tailwind theme](public/cover.png)
 
-Open [color.domi.ninja](https://color.domi.ninja), select a theme color, and adjust it with any picker. Add more pickers to compare color spaces. Light and dark previews update together. Copy the URL to share the whole workspace.
+Open [color.domi.ninja](https://color.domi.ninja), select a theme color, and adjust it with any picker. Add more pickers to compare color spaces. Light and dark previews update together. Copy the URL to share the color. Use Share to create a link to the current workspace.
 
 ## Run locally
 
-Use Node 22.12+ and pnpm.
+Use Node 24+ and pnpm.
 
 ```sh
 pnpm install
@@ -19,7 +19,7 @@ Open the local URL printed by Vite. Pick a theme color, adjust the plane or slid
 
 Use Add picker to open synchronized RGB, HSL, HCL, or OKHCL panels. Each panel has its own mode selector and close button. HCL uses CIELCH D50; OKHCL uses OKLCH. RGB and HSL controls use the browser's sRGB result.
 
-The URL updates with every workspace edit. Copy it to restore picker panels, the shared color, selected theme color, unsaved CSS, presets, color format, preview width and tab on another browser. Presets also save locally when you press Save. Built-in themes are protected. Use Save as new to keep an edited copy. The Brutalist theme uses square corners, hard shadows, and bright colors.
+The normal URL contains only the current color. Picker panels, theme edits, selected token, presets, preview width, and tab stay in browser storage and survive reloads. Share saves a snapshot of the current workspace and active preset, then creates a link you can open in another browser. It does not include other saved presets. Shared workspaces become local copies when opened. Existing workspace URLs still import their saved state. Built-in themes are protected. Use Save as new to keep an edited copy. The Brutalist theme uses square corners, hard shadows, and bright colors.
 
 Light and dark previews appear together, one above the other.
 
@@ -27,18 +27,19 @@ The ZIP contains standalone `index.html` and `dark.html` demos, compiled `styles
 
 ## Color formats
 
-CSS mode uses standard OKLCH syntax. Editor % expresses lightness, chroma, hue, and alpha as percentages. Chroma 100% means 0.4; hue 100% means 360 degrees. CSS does not accept percentage hue, so Copy CSS converts it to degrees.
+Each picker has a matching CSS editor and an Editor % field beside it. Channel controls show native values and percentages together. Percentages use the slider ranges: RGB 100% means 255, CIELCH chroma 100% means 150, and OKLCH chroma 100% means 0.4. Hue 100% means 360 degrees. Percentage hue is editor notation. Copy CSS uses valid CSS for the picker’s color space.
 
 CSS / display shows the native CSS color. Canvas / sRGB shows an 8-bit sRGB canvas readback. Wide-gamut displays may show a difference. RGB values and gamut mapping depend on the browser. Transparent pixels are quantized and may lose RGB precision during canvas readback.
 
 ## Development
 
-React 19, TypeScript, Vite 8, Tailwind 4, and a shadcn-style Button built with Radix Slot and CVA. The editor styles compile through the Vite plugin. The demo styles compile separately in a Web Worker with Tailwind's compiler and render in a sandboxed iframe.
+React 19, TypeScript, Vite 8, Tailwind 4, and a shadcn-style Button built with Radix Slot and CVA. The editor styles compile through the Vite plugin. Picker planes render in separate workers. The Node server serves the built app and handles share links using SQLite. Ordinary edits stay in browser storage; only Share writes a snapshot to the database. The development command starts Vite on port 5173 and the API on port 5174. Set `SHARE_DB_PATH` to choose the database file. The local default is `.data/shares.sqlite`. The demo styles compile separately in a Web Worker with Tailwind's compiler and render in a sandboxed iframe.
 
 Theme CSS accepts Tailwind's CSS configuration, including `@theme` and custom rules. Local Tailwind imports are bundled; arbitrary remote imports and JavaScript plugins are not supported. Every literal `oklch(...)` in the editable stylesheet appears in the color list. Expressions outside the slider ranges can be edited in Theme CSS.
 
 ```sh
 pnpm build
+node --test scripts/server.test.mjs
 pnpm exec playwright install chromium firefox webkit
 pnpm test
 ```
@@ -47,4 +48,4 @@ Tests cover browser canvas output, alpha, out-of-gamut colors, keyboard sliders,
 
 ## Deploy
 
-`pp plan` validates `deploy.yml`. `pp deploy` builds the static app into an nginx container and deploys it to color.domi.ninja. Deployment state stays in the ignored `.deploy/` directory.
+`pp plan` validates `deploy.yml`. `pp deploy` builds the app and Node server into a container and deploys it to color.domi.ninja. The `shares` volume keeps `/data/shares.sqlite` across deployments. Removing that volume deletes saved share links. Deployment state stays in the ignored `.deploy/` directory.

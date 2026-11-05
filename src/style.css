@@ -438,6 +438,18 @@ select {
 }
 .picker-toolbar {
   grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.share-link {
+  min-width: 0;
+  width: 340px;
+  max-width: 100%;
+  padding: 8px;
+  border: 1px solid #838383;
+  border-radius: 4px;
 }
 .picker-panel-heading {
   display: flex;

@@ -8,6 +8,8 @@ import {
   Pencil,
   ExternalLink,
   X,
+  Link,
+  LoaderCircle,
 } from "lucide-react";
 import { zipSync, strToU8 } from "fflate";
 import { Button } from "./components/ui/button";
@@ -22,7 +24,14 @@ import {
   type Color,
 } from "./color";
 import { demoDocument } from "./demo";
-import { useWorkspace, pickerModes, type Workspace } from "./workspace";
+import {
+  useWorkspace,
+  pickerModes,
+  createSnapshot,
+  type Workspace,
+} from "./workspace";
+import type { Snapshot } from "./workspaceSchema";
+import { saveShare } from "./sharing";
 import { useCompiler } from "./useCompiler";
 
 import {
@@ -59,37 +68,27 @@ function download(name: string, data: BlobPart, type: string) {
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
-function startingColor() {
-  try {
-    const c = location.hash.slice(1).split(",").map(Number);
-    if (c.length === 4)
-      return (
-        parseColor(`oklch(${c[0]} ${c[1]} ${c[2]} / ${c[3]}%)`) ?? initialColor
-      );
-  } catch {
-    /* Use the starting swatch. */
-  }
-  return initialColor;
-}
 function initialWorkspace(): Workspace {
   const saved = loadPresets();
-  const color = startingColor();
   return {
     version: 1,
     saved,
     active: saved[0]?.id ?? "",
     source: saved[0]?.source ?? defaults[0].source,
-    color,
+    color: initialColor,
     selected: null,
     tab: "preview",
     width: "100%",
     pickers: [{ id: "initial", mode: "OKHCL" }],
   };
 }
-export function App() {
-  const { state, set } = useWorkspace(initialWorkspace);
+export function App({ shared }: { shared?: Snapshot }) {
+  const { state, set } = useWorkspace(initialWorkspace, shared);
   const { saved, active, source, color, selected, tab, width, pickers } = state;
   const [message, setMessage] = useState("");
+  const [sharing, setSharing] = useState(false);
+  const [shareUrl, setShareUrl] = useState("");
+  const [shareError, setShareError] = useState("");
   const compiled = useCompiler(source);
   const entries = useMemo(
     () =>
@@ -184,6 +183,24 @@ export function App() {
       setMessage("Clipboard unavailable. Select and copy the value.");
     }
   };
+  const share = async () => {
+    setSharing(true);
+    setShareError("");
+    setShareUrl("");
+    try {
+      const url = await saveShare(createSnapshot(state));
+      setShareUrl(url);
+      await copy(url);
+    } catch (error) {
+      setShareError(
+        error instanceof Error
+          ? error.message
+          : "Could not create share link. Try again.",
+      );
+    } finally {
+      setSharing(false);
+    }
+  };
   const exportApp = () => {
     const files = {
       "index.html": strToU8(demoDocument(compiled.css, true)),
@@ -256,6 +273,28 @@ export function App() {
               <Plus size={15} />
               Add picker
             </Button>
+            <Button variant="outline" disabled={sharing} onClick={share}>
+              {sharing ? (
+                <LoaderCircle size={15} className="motion-safe:animate-spin" />
+              ) : (
+                <Link size={15} />
+              )}
+              Share
+            </Button>
+            {shareUrl && (
+              <input
+                className="share-link"
+                aria-label="Share link"
+                readOnly
+                value={shareUrl}
+                onFocus={(event) => event.currentTarget.select()}
+              />
+            )}
+            {shareError && (
+              <span role="alert" className="error">
+                {shareError}
+              </span>
+            )}
           </div>
           {pickers.map((panel, panelIndex) => (
             <section

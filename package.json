@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "pnpm free-port && vite --host :: --port 5173 --strictPort",
+    "dev": "pnpm free-port && node scripts/dev.mjs",
+    "start": "node server.ts",
     "build": "tsc && vite build",
     "preview": "vite preview --host ::",
     "test": "playwright test",

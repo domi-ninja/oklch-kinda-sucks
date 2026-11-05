@@ -17,13 +17,19 @@ services:
     ports:
       - host_ip: 127.0.0.1
         published: auto
-        target: 80
+        target: 3000
+    volumes:
+      - name: shares
+        target: /data
     health:
-      command: ["wget", "-q", "--spider", "http://127.0.0.1/"]
+      command: ["wget", "-q", "--spider", "http://127.0.0.1:3000/api/health"]
       timeout_seconds: 60
 routes:
   - host: color.domi.ninja
     service: web
+volumes:
+  shares:
+    driver: local
 checks:
   smoke:
     - name: public color editor

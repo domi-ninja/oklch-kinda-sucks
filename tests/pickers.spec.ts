@@ -1,5 +1,15 @@
-import { test, expect } from "@playwright/test";
-import { decodeWorkspace } from "../src/workspace";
+import { test, expect, type Page } from "@playwright/test";
+import { colorFromHash, workspaceStorageKey } from "../src/workspace";
+import { workspaceSchema } from "../src/workspaceSchema";
+
+async function readWorkspace(page: Page) {
+  return workspaceSchema.parse(
+    await page.evaluate(
+      (key) => JSON.parse(localStorage.getItem(key) ?? "null"),
+      workspaceStorageKey,
+    ),
+  );
+}
 import {
   cssFunctions,
   fromCoordinates,
@@ -127,7 +137,7 @@ test("all modes share one color, fill their planes, and close independently", as
 }) => {
   await page.goto("/");
   await expect(page.getByLabel("Picker mode", { exact: true })).toBeVisible();
-  const original = decodeWorkspace(new URL(page.url()).hash)!.color;
+  const original = (await readWorkspace(page)).color;
   for (const mode of pickerModes) {
     await page.getByLabel("Picker mode", { exact: true }).selectOption(mode);
     await expect(
@@ -135,7 +145,7 @@ test("all modes share one color, fill their planes, and close independently", as
         exact: true,
       }),
     ).toHaveValue(new RegExp(`^${cssFunctions[mode]}\\(`));
-    expect(decodeWorkspace(new URL(page.url()).hash)!.color).toEqual(original);
+    expect((await readWorkspace(page)).color).toEqual(original);
     await expect
       .poll(() =>
         page.locator("canvas").evaluate((element) => {
@@ -202,7 +212,7 @@ test("all modes share one color, fill their planes, and close independently", as
   );
 });
 
-test("URL restores the entire unsaved workspace without browser storage", async ({
+test("Share exports the active workspace to another browser", async ({
   page,
   browser,
 }) => {
@@ -230,8 +240,11 @@ test("URL restores the entire unsaved workspace without browser storage", async 
     .getByRole("button", { name: "Apply color", exact: true })
     .first()
     .click();
-  const url = page.url();
-  const snapshot = decodeWorkspace(new URL(url).hash)!;
+  const snapshot = await readWorkspace(page);
+  await page.getByRole("button", { name: "Share", exact: true }).click();
+  const shareLink = page.getByLabel("Share link", { exact: true });
+  await expect(shareLink).toBeVisible();
+  const url = await shareLink.inputValue();
   expect(snapshot.pickers.map((p) => p.mode)).toEqual(["OKHCL", "HCL"]);
   expect(snapshot.source).toContain("--radius-lg: 2rem");
   expect(snapshot.selected).not.toBeNull();
@@ -242,12 +255,12 @@ test("URL restores the entire unsaved workspace without browser storage", async 
     await expect(
       shared.getByLabel("Picker mode", { exact: true }).nth(index),
     ).toHaveValue(mode);
-  expect(decodeWorkspace(new URL(shared.url()).hash)).toEqual(snapshot);
+  expect(await readWorkspace(shared)).toEqual(snapshot);
   await expect(shared.getByLabel("Tailwind theme stylesheet")).toHaveValue(
     snapshot.source,
   );
   await shared.reload();
-  expect(decodeWorkspace(new URL(shared.url()).hash)).toEqual(snapshot);
+  expect(await readWorkspace(shared)).toEqual(snapshot);
   await shared.getByRole("tab", { name: "Preview", exact: true }).click();
   await expect(shared.getByLabel("Preview width", { exact: true })).toHaveValue(
     "375px",
@@ -260,30 +273,60 @@ test("URL restores the entire unsaved workspace without browser storage", async 
   await context.close();
 });
 
-test("URL navigation restores picker modes and malformed state falls back safely", async ({
+test("only color goes in the URL; the workspace stays local", async ({
   page,
+  browser,
 }) => {
+  const writes: string[] = [];
+  page.on("request", (request) => {
+    if (request.url().includes("/api/shares")) writes.push(request.method());
+  });
   await page.goto("/");
+  await expect(page.getByLabel("Picker mode", { exact: true })).toBeVisible();
   const first = page.url();
   await page.getByRole("button", { name: "Add picker", exact: true }).click();
   await page
     .getByLabel("Picker mode", { exact: true })
     .last()
     .selectOption("HSL");
+  expect(page.url()).toBe(first);
+  await page
+    .getByLabel("OKLCH value", { exact: true })
+    .fill("oklch(0.6 0.2 30 / 50%)");
+  await page
+    .getByRole("button", { name: "Apply color", exact: true })
+    .first()
+    .click();
   const second = page.url();
-  await page.goto(first);
-  await expect(page.locator(".color-panel")).toHaveCount(1);
-  await page.goto(second);
+  expect(new URL(second).hash).toBe("#color=0.6,0.2,30,0.5");
+  await page.reload();
   await expect(page.locator(".color-panel")).toHaveCount(2);
   await expect(
     page.getByLabel("Picker mode", { exact: true }).last(),
   ).toHaveValue("HSL");
-  await page.goto("/#s=not-valid-workspace-data");
-  await expect(page.locator(".color-panel")).toHaveCount(1);
-  await expect(page.getByLabel("Picker mode", { exact: true })).toHaveValue(
-    "OKHCL",
+  await page.goto(first);
+  await expect(page.locator(".color-panel")).toHaveCount(2);
+  expect(colorFromHash(new URL(page.url()).hash)).toEqual(
+    colorFromHash(new URL(first).hash),
   );
-  expect(decodeWorkspace(new URL(page.url()).hash)).not.toBeNull();
+  await page.goto(second);
+  await expect(page.getByLabel("OKLCH value", { exact: true })).toHaveValue(
+    "oklch(0.6 0.2 30 / 50%)",
+  );
+  await page.goto("/#s=not-valid-workspace-data");
+  await expect(page.locator(".color-panel")).toHaveCount(2);
+  await expect(page.getByLabel("OKLCH value", { exact: true })).toHaveValue(
+    "oklch(0.6 0.2 30 / 50%)",
+  );
+  expect(writes).toEqual([]);
+  const context = await browser.newContext();
+  const other = await context.newPage();
+  await other.goto(second);
+  await expect(other.locator(".color-panel")).toHaveCount(1);
+  await expect(other.getByLabel("OKLCH value", { exact: true })).toHaveValue(
+    "oklch(0.6 0.2 30 / 50%)",
+  );
+  await context.close();
 });
 
 test("OKHCL percentages control native color coordinates and survive URL restoration", async ({
@@ -328,9 +371,7 @@ test("OKHCL percentages control native color coordinates and survive URL restora
   await expect(
     page.getByRole("spinbutton", { name: "Hue percentage", exact: true }),
   ).toHaveValue("50.1");
-  expect(decodeWorkspace(new URL(page.url()).hash)?.color.h).toBeCloseTo(
-    180.36,
-  );
+  expect((await readWorkspace(page)).color.h).toBeCloseTo(180.36);
   await page.reload();
   await expect(
     page.getByRole("spinbutton", { name: "Hue percentage", exact: true }),

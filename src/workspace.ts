@@ -1,29 +1,63 @@
 import { useEffect, useLayoutEffect, useState } from "react";
 import { gzipSync, gunzipSync, strToU8, strFromU8 } from "fflate";
-import { z } from "zod";
 import { isRetiredPreset, sourceFor, baseTokens } from "./demo";
 import { normalizePresets } from "./presets";
-export const pickerModes = ["RGB", "HSL", "HCL", "OKHCL"] as const;
-export type PickerMode = (typeof pickerModes)[number];
-const schema = z.object({
-  version: z.literal(1),
-  saved: z.array(
-    z.object({ id: z.string(), name: z.string(), source: z.string() }),
-  ),
-  active: z.string(),
-  source: z.string(),
-  color: z.object({
-    l: z.number().finite(),
-    c: z.number().finite(),
-    h: z.number().finite(),
-    a: z.number().min(0).max(1),
-  }),
-  selected: z.number().int().nonnegative().nullable(),
-  tab: z.enum(["preview", "source", "compiled"]),
-  width: z.enum(["100%", "375px", "768px"]),
-  pickers: z.array(z.object({ id: z.string(), mode: z.enum(pickerModes) })),
-});
-export type Workspace = z.infer<typeof schema>;
+export {
+  pickerModes,
+  type PickerMode,
+  type Workspace,
+} from "./workspaceSchema";
+import {
+  workspaceSchema,
+  colorSchema,
+  type Workspace,
+  type Snapshot,
+} from "./workspaceSchema";
+import { round, type Color } from "./color";
+
+export const workspaceStorageKey = "oklch-workspace";
+
+export function colorHash(color: Color) {
+  return `#color=${[color.l, color.c, color.h, color.a].map((value) => round(value, 6)).join(",")}`;
+}
+export function colorFromHash(hash: string): Color | null {
+  const current = hash.startsWith("#color=");
+  const parts = hash.slice(current ? 7 : 1).split(",");
+  if (parts.length !== 4 || parts.some((part) => !part.trim())) return null;
+  const [l, c, h, a] = parts.map(Number);
+  const parsed = colorSchema.safeParse({ l, c, h, a: current ? a : a / 100 });
+  return parsed.success ? parsed.data : null;
+}
+
+export function createSnapshot(state: Workspace): Snapshot {
+  const { saved, ...workspace } = state;
+  return {
+    ...workspace,
+    preset: saved.find((preset) => preset.id === state.active) ?? null,
+  };
+}
+
+export function importSnapshot(
+  snapshot: Snapshot,
+  local: Workspace,
+): Workspace {
+  const { preset, ...workspace } = snapshot;
+  let active = "";
+  const saved = [...local.saved];
+  if (preset) {
+    const existing = saved.find((item) => item.id === preset.id);
+    active =
+      existing &&
+      (existing.source !== preset.source || existing.name !== preset.name)
+        ? crypto.randomUUID()
+        : preset.id;
+    if (!existing || active !== existing.id)
+      saved.push({ ...preset, id: active });
+  }
+  return { ...workspace, active, saved: normalizePresets(saved) };
+}
+
+// Kept for importing the compressed workspace links used before color-only URLs.
 export function encodeWorkspace(state: Workspace) {
   const bytes = gzipSync(strToU8(JSON.stringify(state)), { mtime: 0 });
   let binary = "";
@@ -40,7 +74,7 @@ export function decodeWorkspace(hash: string): Workspace | null {
     const binary = atob(
       hash.slice(3).replaceAll("-", "+").replaceAll("_", "/"),
     );
-    const state = schema.parse(
+    const state = workspaceSchema.parse(
       JSON.parse(
         strFromU8(gunzipSync(Uint8Array.from(binary, (c) => c.charCodeAt(0)))),
       ),
@@ -65,35 +99,66 @@ export function decodeWorkspace(hash: string): Workspace | null {
     return null;
   }
 }
-export function useWorkspace(initial: () => Workspace) {
-  const [state, setState] = useState(
-    () => decodeWorkspace(location.hash) ?? initial(),
-  );
+function readWorkspace(initial: () => Workspace) {
+  let state = initial();
+  try {
+    const stored = workspaceSchema.safeParse(
+      JSON.parse(localStorage.getItem(workspaceStorageKey) ?? "null"),
+    );
+    if (stored.success)
+      state = { ...stored.data, saved: normalizePresets(stored.data.saved) };
+  } catch {
+    /* Continue in memory when browser storage is unavailable. */
+  }
+  const legacy = decodeWorkspace(location.hash);
+  if (legacy) return legacy;
+  const color = colorFromHash(location.hash);
+  if (!color || colorHash(state.color) === location.hash) return state;
+  return { ...state, color, selected: null };
+}
+
+export function useWorkspace(initial: () => Workspace, shared?: Snapshot) {
+  const [state, setState] = useState(() => {
+    const local = readWorkspace(initial);
+    return shared ? importSnapshot(shared, local) : local;
+  });
   useLayoutEffect(
-    function persistWorkspaceInUrl() {
-      const hash = `#s=${encodeWorkspace(state)}`;
-      if (location.hash !== hash)
-        history.replaceState(
-          null,
-          "",
-          `${location.pathname}${location.search}${hash}`,
-        );
+    function persistColorInUrl() {
+      const hash = colorHash(state.color);
+      if (location.hash !== hash || location.pathname.startsWith("/share/"))
+        history.replaceState(null, "", `/${location.search}${hash}`);
+    },
+    [state.color],
+  );
+  useEffect(
+    function persistWorkspaceLocally() {
+      try {
+        localStorage.setItem(workspaceStorageKey, JSON.stringify(state));
+        localStorage.setItem("oklch-presets", JSON.stringify(state.saved));
+      } catch {
+        /* Continue in memory when browser storage is unavailable. */
+      }
     },
     [state],
   );
-  useEffect(
-    function restoreWorkspaceNavigation() {
-      const restore = () =>
-        setState(decodeWorkspace(location.hash) ?? initial());
-      window.addEventListener("popstate", restore);
-      window.addEventListener("hashchange", restore);
-      return () => {
-        window.removeEventListener("popstate", restore);
-        window.removeEventListener("hashchange", restore);
-      };
-    },
-    [initial],
-  );
+  useEffect(function restoreColorNavigation() {
+    const restore = () => {
+      const legacy = decodeWorkspace(location.hash);
+      if (legacy) {
+        setState(legacy);
+        return;
+      }
+      const color = colorFromHash(location.hash);
+      if (color)
+        setState((previous) => ({ ...previous, color, selected: null }));
+    };
+    window.addEventListener("popstate", restore);
+    window.addEventListener("hashchange", restore);
+    return () => {
+      window.removeEventListener("popstate", restore);
+      window.removeEventListener("hashchange", restore);
+    };
+  }, []);
   function set<K extends keyof Workspace>(key: K, value: Workspace[K]) {
     setState((previous) => ({ ...previous, [key]: value }));
   }
