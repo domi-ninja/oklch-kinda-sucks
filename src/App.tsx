@@ -14,6 +14,8 @@ import { zipSync, strToU8 } from "fflate";
 import { Button } from "./components/ui/button";
 import { Picker } from "./Picker";
 import { PaletteControls } from "./PaletteControls";
+import { ModeGenerator } from "./ModeGenerator";
+import { defaultModeGeneration } from "./modeGeneration";
 import { createPaletteRamp, paletteCss } from "./palette";
 import { ColorEditors } from "./ColorEditors";
 import { ColorSwatches } from "./ColorSwatches";
@@ -544,6 +546,15 @@ export function App({ shared }: { shared?: Snapshot }) {
               </Button>
             </div>
           </section>
+          <ModeGenerator
+            source={source}
+            settings={state.modeGeneration ?? defaultModeGeneration}
+            onSettingsChange={(settings) => set("modeGeneration", settings)}
+            onApply={(next) => {
+              set("source", next);
+              set("selected", null);
+            }}
+          />
           <section className="panel theme-panel">
             <div className="panel-heading">
               <h2>shadcn/ui theme</h2>
