@@ -15,6 +15,7 @@ COPY --from=build /app/dist/ ./dist/
 COPY --from=build /app/node_modules/ ./node_modules/
 COPY package.json server.ts ./
 COPY src/workspaceSchema.ts ./src/workspaceSchema.ts
+COPY src/colorBounds.ts ./src/colorBounds.ts
 RUN mkdir /data && chown node:node /data
 USER node
 ENV PORT=3000 SHARE_DB_PATH=/data/shares.sqlite

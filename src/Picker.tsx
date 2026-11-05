@@ -83,11 +83,11 @@ export function Picker({
             aria-label={name}
             type="range"
             min="0"
-            max={Math.max(100, (value / max) * 100)}
+            max={100}
             step={0.1}
             value={(value / max) * 100}
             style={{
-              backgroundImage: `linear-gradient(to right, ${Array.from({ length: 37 }, (_, i) => paint((i / 36) * Math.max(max, value))).join(",")})`,
+              backgroundImage: `linear-gradient(to right, ${Array.from({ length: 37 }, (_, i) => paint((i / 36) * max)).join(",")})`,
             }}
             onChange={(e) => change((Number(e.target.value) / 100) * max)}
           />
@@ -95,7 +95,7 @@ export function Picker({
             <NumericInput
               aria-label={`${name} value`}
               min={0}
-              max={Math.max(max, value)}
+              max={max}
               step={step}
               value={round(value, 3)}
               onValueChange={change}
@@ -106,7 +106,7 @@ export function Picker({
             <NumericInput
               aria-label={`${name} percentage`}
               min={0}
-              max={Math.max(100, (value / max) * 100)}
+              max={100}
               step={0.1}
               value={round((value / max) * 100, 3)}
               onValueChange={(value) => change((value / 100) * max)}

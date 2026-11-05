@@ -1,4 +1,5 @@
 import { cssColor, type Color } from "./color";
+import { clampColor } from "./colorBounds";
 import { coordinates, fromCoordinates, type Coordinates } from "./pickerModes";
 import type { PaletteEndpoint, PickerMode } from "./workspaceSchema";
 
@@ -29,6 +30,8 @@ export function createPaletteRamp(
   mode: PickerMode,
   subdivisions: number,
 ) {
+  start = clampColor(start);
+  end = clampColor(end);
   const from = coordinates(start, mode);
   const to = coordinates(end, mode);
   const cache = new Map<number, Color>([

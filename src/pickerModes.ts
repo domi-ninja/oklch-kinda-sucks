@@ -1,5 +1,6 @@
 import { converter, parse } from "culori";
 import { cssColor, parseColor, round, sampleColor, type Color } from "./color";
+import { clampChannel, clampColor } from "./colorBounds";
 import type { PickerMode } from "./workspace";
 const toLch = converter("lch");
 const toHsl = converter("hsl");
@@ -50,14 +51,26 @@ export function parsePickerExpression(
     const expectedMode =
       mode === "RGB" ? "rgb" : mode === "HSL" ? "hsl" : "lch";
     if (!parsed || parsed.mode !== expectedMode) return null;
-    const color = toOklch(parsed);
-    const result = {
-      l: color.l,
-      c: color.c,
-      h: color.h ?? 0,
-      a: color.alpha ?? 1,
-    };
-    return Object.values(result).every(Number.isFinite) ? result : null;
+    const alpha = parsed.alpha ?? 1;
+    if (parsed.mode === "rgb")
+      return fromCoordinates(
+        [parsed.r * 255, parsed.g * 255, parsed.b * 255],
+        mode,
+        alpha,
+      );
+    if (parsed.mode === "hsl")
+      return fromCoordinates(
+        [(((parsed.h ?? 0) % 360) + 360) % 360, parsed.s * 100, parsed.l * 100],
+        mode,
+        alpha,
+      );
+    if (parsed.mode === "lch")
+      return fromCoordinates(
+        [(((parsed.h ?? 0) % 360) + 360) % 360, parsed.c, parsed.l],
+        mode,
+        alpha,
+      );
+    return null;
   }
   const match = text
     .trim()
@@ -86,7 +99,19 @@ export function coordinates(color: Color, mode: PickerMode): Coordinates {
     cached = {};
     coordinateCache.set(color, cached);
   }
-  return (cached[mode] ??= calculateCoordinates(color, mode));
+  return (cached[mode] ??= clampCoordinates(
+    calculateCoordinates(clampColor(color), mode),
+    mode,
+  ));
+}
+export function clampCoordinates(
+  values: Coordinates,
+  mode: PickerMode,
+): Coordinates {
+  const [x, y, z] = values.map((value, index) =>
+    clampChannel(value, channels[mode][index].max),
+  );
+  return [x, y, z];
 }
 function calculateCoordinates(color: Color, mode: PickerMode): Coordinates {
   if (mode === "OKHCL") return [color.h, color.c, color.l];
@@ -114,18 +139,19 @@ export function coordinateCss(
   return `oklch(${z} ${y} ${x} / ${alpha})`;
 }
 export function fromCoordinates(
-  [x, y, z]: Coordinates,
+  values: Coordinates,
   mode: PickerMode,
   a: number,
 ): Color {
-  if (mode === "OKHCL") return { h: x, c: y, l: z, a };
+  const [x, y, z] = clampCoordinates(values, mode);
+  if (mode === "OKHCL") return clampColor({ h: x, c: y, l: z, a });
   const c =
     mode === "RGB"
       ? toOklch({ mode: "rgb", r: x / 255, g: y / 255, b: z / 255 })
       : mode === "HSL"
         ? toOklch({ mode: "hsl", h: x, s: y / 100, l: z / 100 })
         : toOklch({ mode: "lch", h: x, c: y, l: z });
-  return { l: c.l, c: c.c, h: c.h ?? 0, a };
+  return clampColor({ l: c.l, c: c.c, h: c.h ?? 0, a });
 }
 export const channels = {
   RGB: [

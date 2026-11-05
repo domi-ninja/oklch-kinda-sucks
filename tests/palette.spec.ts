@@ -195,7 +195,7 @@ test("both endpoint handles edit the correct color on all three planes", async (
       exact: true,
     });
     const end = plane.getByRole("button", { name: /^End color in / });
-    await end.scrollIntoViewIfNeeded();
+    await plane.scrollIntoViewIfNeeded();
     const handle = (await end.boundingBox())!;
     const bounds = (await plane.boundingBox())!;
     const before = (await workspace(page)).palette!.end;

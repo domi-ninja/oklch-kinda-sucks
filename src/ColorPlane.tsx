@@ -142,7 +142,7 @@ export function ColorPlane({
           next[axis] = Math.max(
             0,
             Math.min(
-              Math.max(config[axis].max, base[axis]),
+              config[axis].max,
               base[axis] +
                 direction * config[axis].step * (event.shiftKey ? 10 : 1),
             ),

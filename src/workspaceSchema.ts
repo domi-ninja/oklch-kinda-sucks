@@ -1,10 +1,13 @@
 import { z } from "zod";
-export const colorSchema = z.object({
-  l: z.number().finite(),
-  c: z.number().finite(),
-  h: z.number().finite(),
-  a: z.number().min(0).max(1),
-});
+import { clampColor } from "./colorBounds.ts";
+export const colorSchema = z
+  .object({
+    l: z.number().finite(),
+    c: z.number().finite(),
+    h: z.number().finite(),
+    a: z.number().min(0).max(1),
+  })
+  .transform(clampColor);
 export const pickerModes = ["RGB", "HSL", "HCL", "OKHCL"] as const;
 export type PickerMode = (typeof pickerModes)[number];
 export const paletteSchema = z.object({

@@ -15,6 +15,7 @@ import {
   type Snapshot,
 } from "./workspaceSchema";
 import { round, type Color } from "./color";
+import { clampColor } from "./colorBounds";
 
 export const workspaceStorageKey = "oklch-workspace";
 
@@ -23,6 +24,7 @@ export function pickedColor(state: Pick<Workspace, "color" | "palette">) {
 }
 
 function withPickedColor(state: Workspace, color: Color): Workspace {
+  color = clampColor(color);
   return state.palette?.endpoint === "end"
     ? { ...state, palette: { ...state.palette, end: color } }
     : { ...state, color };
