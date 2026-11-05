@@ -431,24 +431,6 @@ export function App({ shared }: { shared?: Snapshot }) {
                   <X size={15} />
                 </Button>
               </div>
-              <div className="panel-heading">
-                <h2>
-                  {palette
-                    ? `${palette.endpoint === "start" ? "Start" : "End"} color`
-                    : "Color"}
-                </h2>
-                <button
-                  onClick={() => {
-                    set("selected", null);
-                    setMessage("Picker detached from theme");
-                  }}
-                  className="text-button"
-                >
-                  {selected !== null
-                    ? entries[selected]?.name.replace("color-", "")
-                    : "Free pick"}
-                </button>
-              </div>
               <Picker
                 color={color}
                 mode={panel.mode}

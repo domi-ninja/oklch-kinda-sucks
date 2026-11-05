@@ -75,14 +75,6 @@ h2 {
   border-bottom: 1px solid #9d9d9d;
   gap: 8px;
 }
-.color-panel .panel-heading {
-  border: 0;
-}
-.text-button {
-  color: #414141;
-  text-align: right;
-  overflow-wrap: anywhere;
-}
 .picker {
   padding: 0 16px;
   overflow: clip;
@@ -654,10 +646,6 @@ select {
     min-width: 44px;
     min-height: 44px;
     margin-left: auto;
-  }
-  .text-button {
-    min-width: 0;
-    max-width: 100%;
   }
   .plane {
     height: auto;
