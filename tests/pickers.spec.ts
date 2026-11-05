@@ -121,19 +121,22 @@ test("plane rendering catches up to the latest hue after rapid changes", async (
   for (const value of [10, 40, 60, 80]) await hue.fill(String(value));
   await expect
     .poll(() =>
-      page.locator("canvas").evaluate((canvas) => {
-        if (!(canvas instanceof HTMLCanvasElement))
-          throw new Error("Expected canvas");
-        const context = canvas.getContext("2d")!;
-        const actual = [...context.getImageData(128, 80, 1, 1).data];
-        const reference = document.createElement("canvas").getContext("2d")!;
-        reference.fillStyle = `oklch(${1 - 80 / 159} ${(128 / 255) * 0.4} 288)`;
-        reference.fillRect(0, 0, 1, 1);
-        return actual.every(
-          (value, index) =>
-            value === reference.getImageData(0, 0, 1, 1).data[index],
-        );
-      }),
+      page
+        .locator("canvas")
+        .first()
+        .evaluate((canvas) => {
+          if (!(canvas instanceof HTMLCanvasElement))
+            throw new Error("Expected canvas");
+          const context = canvas.getContext("2d")!;
+          const actual = [...context.getImageData(128, 80, 1, 1).data];
+          const reference = document.createElement("canvas").getContext("2d")!;
+          reference.fillStyle = `oklch(${1 - 80 / 159} ${(128 / 255) * 0.4} 288)`;
+          reference.fillRect(0, 0, 1, 1);
+          return actual.every(
+            (value, index) =>
+              value === reference.getImageData(0, 0, 1, 1).data[index],
+          );
+        }),
     )
     .toBe(true);
 });
@@ -158,16 +161,19 @@ test("all modes share one color, fill their planes, and close independently", as
     expect((await readWorkspace(page)).color).toEqual(original);
     await expect
       .poll(() =>
-        page.locator("canvas").evaluate((element) => {
-          if (!(element instanceof HTMLCanvasElement))
-            throw new Error("Expected canvas");
-          const data = element
-            .getContext("2d")!
-            .getImageData(0, 0, element.width, element.height).data;
-          return Array.from(data).every(
-            (channel, i) => i % 4 !== 3 || channel === 255,
-          );
-        }),
+        page
+          .locator("canvas")
+          .first()
+          .evaluate((element) => {
+            if (!(element instanceof HTMLCanvasElement))
+              throw new Error("Expected canvas");
+            const data = element
+              .getContext("2d")!
+              .getImageData(0, 0, element.width, element.height).data;
+            return Array.from(data).every(
+              (channel, i) => i % 4 !== 3 || channel === 255,
+            );
+          }),
       )
       .toBe(true);
   }

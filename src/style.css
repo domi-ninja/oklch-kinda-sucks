@@ -86,12 +86,23 @@ h2 {
 .picker {
   padding: 0 16px;
 }
+.color-planes {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.color-plane {
+  min-width: 0;
+}
+.plane-caption {
+  margin-bottom: 8px;
+  overflow-wrap: anywhere;
+}
 .plane {
   position: relative;
   height: 224px;
   touch-action: none;
   cursor: crosshair;
-  margin-bottom: 24px;
   border-radius: 5px;
 }
 .plane canvas {

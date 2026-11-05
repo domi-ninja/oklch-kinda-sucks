@@ -1,4 +1,7 @@
-import { useEffect, useId, useRef } from "react";
+import { useId } from "react";
+import { ColorPlane } from "./ColorPlane";
+import { pickerPlanes } from "./planes";
+import { usePlaneRenderer } from "./usePlaneRenderer";
 import { type Color, cssColor, round } from "./color";
 import type { PickerMode } from "./workspace";
 import { NumericInput } from "./NumericInput";
@@ -18,61 +21,10 @@ export function Picker({
   mode?: PickerMode;
   onChange: (color: Color) => void;
 }) {
-  const canvas = useRef<HTMLCanvasElement>(null);
-  const requestPlane = useRef<(mode: PickerMode, fixed: number) => void>(
-    () => {},
-  );
   const id = useId();
   const values = coordinates(color, mode);
   const config = channels[mode];
-  const xAxis = mode === "RGB" ? 0 : 1;
-  const yAxis = mode === "RGB" ? 1 : 2;
-  const fixed = values[mode === "RGB" ? 2 : 0];
-  useEffect(function startPlaneRenderer() {
-    const context = canvas.current?.getContext("2d", { colorSpace: "srgb" });
-    if (!context) return;
-    const worker = new Worker(new URL("./plane.worker.ts", import.meta.url), {
-      type: "module",
-    });
-    let painting: PickerMode | null = null;
-    let pending: { mode: PickerMode; fixed: number } | null = null;
-    const paint = () => {
-      if (painting || !pending) return;
-      painting = pending.mode;
-      worker.postMessage(pending);
-      pending = null;
-    };
-    worker.onmessage = (event: MessageEvent<ImageBitmap>) => {
-      // Keep dragging visible while the latest plane paints; never queue old frames.
-      if (!pending || pending.mode === painting)
-        context.drawImage(event.data, 0, 0);
-      painting = null;
-      event.data.close();
-      paint();
-    };
-    requestPlane.current = (mode, fixed) => {
-      pending = { mode, fixed };
-      paint();
-    };
-    return () => worker.terminate();
-  }, []);
-  useEffect(
-    function paintBrowserPlane() {
-      requestPlane.current(mode, fixed);
-    },
-    [mode, fixed],
-  );
-  const move = (e: React.PointerEvent<HTMLDivElement>) => {
-    const bounds = e.currentTarget.getBoundingClientRect();
-    const next: Coordinates = [...values];
-    next[xAxis] =
-      Math.max(0, Math.min(1, (e.clientX - bounds.left) / bounds.width)) *
-      config[xAxis].max;
-    next[yAxis] =
-      (1 - Math.max(0, Math.min(1, (e.clientY - bounds.top) / bounds.height))) *
-      config[yAxis].max;
-    onChange(fromCoordinates(next, mode, color.a));
-  };
+  const render = usePlaneRenderer();
   const dimensions = [
     ...config.map((channel, index) => ({
       ...channel,
@@ -100,34 +52,18 @@ export function Picker({
   ];
   return (
     <div className="picker">
-      <div
-        className="plane"
-        onPointerDown={(e) => {
-          e.currentTarget.setPointerCapture(e.pointerId);
-          move(e);
-        }}
-        onPointerMove={(e) => {
-          if (e.buttons) move(e);
-        }}
-      >
-        <canvas
-          ref={canvas}
-          width={256}
-          height={160}
-          aria-label={`Browser rendered ${mode} color plane`}
-        />
-        <span
-          className="crosshair"
-          style={{
-            left: `${Math.max(0, Math.min(100, (values[xAxis] / config[xAxis].max) * 100))}%`,
-            top: `${Math.max(0, Math.min(100, (1 - values[yAxis] / config[yAxis].max) * 100))}%`,
-            background: cssColor({ ...color, a: 1 }),
-          }}
-        />
-        <div className="plane-labels">
-          <span>{config[yAxis].name} ↑</span>
-          <span>{config[xAxis].name} →</span>
-        </div>
+      <div className="color-planes">
+        {pickerPlanes(mode).map((mapping) => (
+          <ColorPlane
+            key={mapping.fixed}
+            color={color}
+            mode={mode}
+            values={values}
+            mapping={mapping}
+            render={render}
+            onChange={onChange}
+          />
+        ))}
       </div>
       {dimensions.map(({ name, max, unit, step, value, change, paint }) => (
         <div className="slider-row" key={name}>

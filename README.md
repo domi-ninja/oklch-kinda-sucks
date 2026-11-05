@@ -17,7 +17,7 @@ pnpm dev
 
 Open the local URL printed by Vite. Pick a theme color, adjust the plane or sliders, and see the component preview update. Save a preset to keep it in this browser. Export CSS for the compiled stylesheet or export the app for a ZIP you can open offline.
 
-Use Add picker to open synchronized RGB, HSL, HCL, or OKHCL panels. Each panel has its own mode selector and close button. HCL uses CIELCH D50; OKHCL uses OKLCH. RGB and HSL controls use the browser's sRGB result.
+Use Add picker to open synchronized RGB, HSL, HCL, or OKHCL panels. Each panel has its own mode selector and close button. Its three planes show every pair of color channels, with the remaining channel held at its current value. HCL uses CIELCH D50; OKHCL uses OKLCH. RGB and HSL controls use the browser's sRGB result.
 
 The normal URL contains the current color and open picker modes. Theme edits, selected token, presets, preview width, and tab stay in browser storage and survive reloads. Share saves a snapshot of the current workspace and active preset, then creates a link you can open in another browser. It does not include other saved presets. Shared workspaces become local copies when opened. Existing workspace URLs still import their saved state. Built-in themes are protected. Use Save as new to keep an edited copy. The Brutalist theme uses square corners, hard shadows, and bright colors.
 
