@@ -124,8 +124,10 @@ export function Picker({
             background: cssColor({ ...color, a: 1 }),
           }}
         />
-        <span className="plane-label">{config[yAxis].name} ↑</span>
-        <span className="plane-label right">{config[xAxis].name} →</span>
+        <div className="plane-labels">
+          <span>{config[yAxis].name} ↑</span>
+          <span>{config[xAxis].name} →</span>
+        </div>
       </div>
       {dimensions.map(({ name, max, unit, step, value, change, paint }) => (
         <div className="slider-row" key={name}>

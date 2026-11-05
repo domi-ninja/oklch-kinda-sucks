@@ -257,7 +257,7 @@ export function App({ shared }: { shared?: Snapshot }) {
         <aside
           className="left-column"
           style={{
-            gridTemplateColumns: `repeat(${Math.max(1, pickers.length)}, 340px)`,
+            gridTemplateColumns: `var(--picker-columns, repeat(${Math.max(1, pickers.length)}, 340px))`,
           }}
         >
           <div className="picker-toolbar">

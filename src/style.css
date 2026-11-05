@@ -110,17 +110,17 @@ h2 {
   box-shadow: 0 0 0 1px #333;
   pointer-events: none;
 }
-.plane-label {
+.plane-labels {
   position: absolute;
   bottom: 8px;
   left: 8px;
+  right: 8px;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
   color: white;
   text-shadow: 0 1px 3px black;
   pointer-events: none;
-}
-.plane-label.right {
-  right: 8px;
-  left: auto;
 }
 .slider-row {
   display: grid;
@@ -399,23 +399,15 @@ select {
 }
 @media (max-width: 1100px) {
   .workspace {
-    grid-template-columns: max-content minmax(310px, 1fr);
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .left-column {
+    --picker-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr));
   }
   .preview-panel {
     grid-column: 1 / -1;
   }
 }
-@media (max-width: 760px) {
-  .workspace {
-    padding: 16px;
-  }
-  input:not([type="range"]),
-  select,
-  textarea {
-    font-size: 16px;
-  }
-}
-
 .left-column {
   align-items: start;
 }
@@ -493,4 +485,114 @@ select {
   justify-content: space-between;
   margin-bottom: 8px;
   text-align: left;
+}
+
+@media (max-width: 760px) {
+  .workspace {
+    padding: 16px;
+    overflow-x: visible;
+  }
+  .left-column {
+    --picker-columns: repeat(2, minmax(0, 1fr));
+  }
+  .color-panel {
+    container-type: inline-size;
+  }
+  input:not([type="range"]),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+  .panel-heading,
+  .picker-panel-heading,
+  .color-field-heading,
+  .tabs,
+  .preview-toolbar,
+  .export-bar,
+  .preset-actions {
+    flex-wrap: wrap;
+  }
+  .picker-panel-heading,
+  .color-field-heading {
+    gap: 8px;
+  }
+  .picker-panel-heading select {
+    flex: 1 1 80px;
+    min-width: 0;
+    max-width: 100%;
+  }
+  .picker-panel-heading button,
+  .color-field-heading button {
+    min-width: 44px;
+    min-height: 44px;
+    margin-left: auto;
+  }
+  .text-button {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .plane {
+    height: auto;
+    aspect-ratio: 1;
+  }
+  .plane-labels {
+    flex-direction: column;
+    gap: 0;
+    overflow-wrap: anywhere;
+  }
+  .slider-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .slider-row input[type="range"] {
+    height: 44px;
+    background-size: 100% 14px;
+    background-position: center;
+    background-repeat: no-repeat;
+    border: 0;
+  }
+  .number {
+    min-width: 0;
+    min-height: 44px;
+  }
+  .swatches {
+    flex-wrap: wrap;
+  }
+  .swatches > button {
+    width: 100%;
+    min-width: 0;
+  }
+  .value-field,
+  .tabs button {
+    min-height: 44px;
+  }
+  .token-pair {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .token-pair > .token + .token {
+    border-left: 0;
+  }
+  .token-pair .token-name {
+    white-space: normal;
+    overflow: visible;
+  }
+  .token-list {
+    max-height: none;
+  }
+}
+
+@container (min-width: 280px) {
+  .slider-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .slider-row > label:first-child,
+  .slider-row > input[type="range"] {
+    grid-column: 1 / -1;
+  }
+  .swatches > button {
+    width: calc(50% - 4px);
+  }
+  .plane-labels {
+    flex-direction: row;
+    gap: 8px;
+  }
 }
