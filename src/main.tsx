@@ -4,6 +4,7 @@ import { App } from "./App";
 import "./style.css";
 import { loadShare } from "./sharing";
 import { Button } from "./components/ui/button";
+import { TooltipProvider } from "./components/ui/tooltip";
 
 const root = createRoot(document.getElementById("root")!);
 async function start() {
@@ -18,7 +19,9 @@ async function start() {
     const shared = share ? await loadShare(share[1]) : undefined;
     root.render(
       <React.StrictMode>
-        <App shared={shared} />
+        <TooltipProvider delayDuration={350}>
+          <App shared={shared} />
+        </TooltipProvider>
       </React.StrictMode>,
     );
   } catch (error) {

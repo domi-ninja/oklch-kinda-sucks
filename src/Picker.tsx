@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef } from "react";
 import { type Color, cssColor, round } from "./color";
 import type { PickerMode } from "./workspace";
+import { NumericInput } from "./NumericInput";
 import {
   channels,
   coordinates,
@@ -143,45 +144,24 @@ export function Picker({
             onChange={(e) => change((Number(e.target.value) / 100) * max)}
           />
           <label className="number">
-            <input
+            <NumericInput
               aria-label={`${name} value`}
-              type="number"
-              min="0"
+              min={0}
               max={Math.max(max, value)}
               step={step}
               value={round(value, 3)}
-              onChange={(e) =>
-                change(
-                  Math.max(
-                    0,
-                    Math.min(Math.max(max, value), Number(e.target.value)),
-                  ),
-                )
-              }
+              onValueChange={change}
             />
             <span>{unit}</span>
           </label>
           <label className="number">
-            <input
+            <NumericInput
               aria-label={`${name} percentage`}
-              type="number"
-              min="0"
+              min={0}
               max={Math.max(100, (value / max) * 100)}
               step={0.1}
               value={round((value / max) * 100, 3)}
-              onChange={(e) =>
-                change(
-                  (Math.max(
-                    0,
-                    Math.min(
-                      Math.max(100, (value / max) * 100),
-                      Number(e.target.value),
-                    ),
-                  ) /
-                    100) *
-                    max,
-                )
-              }
+              onValueChange={(value) => change((value / 100) * max)}
             />
             <span>%</span>
           </label>

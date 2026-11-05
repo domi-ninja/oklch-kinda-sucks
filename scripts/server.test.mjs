@@ -5,6 +5,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { once } from "node:events";
+import { chromium, expect } from "@playwright/test";
 
 async function start(database) {
   const child = spawn(process.execPath, ["server.ts"], {
@@ -89,6 +90,55 @@ test("share snapshots survive a server restart; invalid writes leave no share", 
       snapshot,
     );
   } finally {
+    await server.stop();
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("normal reloads fetch HTML and open tabs detect a new deployment", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "color-update-"));
+  const server = await start(join(directory, "shares.sqlite"));
+  const browser = await chromium.launch();
+  try {
+    const html = await fetch(server.url);
+    assert.equal(html.headers.get("cache-control"), "no-store");
+    const response = await fetch(`${server.url}/api/version`);
+    assert.equal(response.headers.get("cache-control"), "no-store");
+    const { entry } = await response.json();
+    assert.match(entry, /^\/assets\/index-[\w-]+\.js$/);
+    assert.match(
+      (await fetch(`${server.url}${entry}`)).headers.get("cache-control"),
+      /immutable/,
+    );
+    const page = await browser.newPage();
+    const initialCheck = page.waitForResponse((response) =>
+      response.url().endsWith("/api/version"),
+    );
+    await page.goto(server.url);
+    await initialCheck;
+    await page
+      .getByLabel("OKLCH value", { exact: true })
+      .fill("oklch(0.6 0.2 30 / 50%)");
+    await page
+      .getByRole("button", { name: "Apply color", exact: true })
+      .click();
+    await page.route("**/api/version", (route) =>
+      route.fulfill({ json: { entry: "/assets/index-next-release.js" } }),
+    );
+    await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+    await expect(
+      page.getByRole("button", { name: "Reload", exact: true }),
+    ).toBeVisible();
+    await page.unroute("**/api/version");
+    await page.getByRole("button", { name: "Reload", exact: true }).click();
+    await expect(page.getByLabel("OKLCH value", { exact: true })).toHaveValue(
+      "oklch(0.6 0.2 30 / 50%)",
+    );
+    await expect(
+      page.getByRole("button", { name: "Reload", exact: true }),
+    ).toHaveCount(0);
+  } finally {
+    await browser.close();
     await server.stop();
     await rm(directory, { recursive: true, force: true });
   }

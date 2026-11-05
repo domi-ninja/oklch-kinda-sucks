@@ -10,6 +10,7 @@ export {
 import {
   workspaceSchema,
   colorSchema,
+  pickerModes,
   type Workspace,
   type Snapshot,
 } from "./workspaceSchema";
@@ -21,12 +22,35 @@ export function colorHash(color: Color) {
   return `#color=${[color.l, color.c, color.h, color.a].map((value) => round(value, 6)).join(",")}`;
 }
 export function colorFromHash(hash: string): Color | null {
-  const current = hash.startsWith("#color=");
-  const parts = hash.slice(current ? 7 : 1).split(",");
+  const encoded = new URLSearchParams(hash.slice(1)).get("color");
+  const current = encoded !== null;
+  const parts = (encoded ?? hash.slice(1)).split(",");
   if (parts.length !== 4 || parts.some((part) => !part.trim())) return null;
   const [l, c, h, a] = parts.map(Number);
   const parsed = colorSchema.safeParse({ l, c, h, a: current ? a : a / 100 });
   return parsed.success ? parsed.data : null;
+}
+
+export function workspaceHash(state: Pick<Workspace, "color" | "pickers">) {
+  return `${colorHash(state.color)}&pickers=${state.pickers.map((picker) => picker.mode).join(",")}`;
+}
+
+function pickersFromHash(hash: string, existing: Workspace["pickers"]) {
+  const encoded = new URLSearchParams(hash.slice(1)).get("pickers");
+  if (encoded === null) return null;
+  const modes = encoded
+    ? encoded
+        .split(",")
+        .map((value) => pickerModes.find((mode) => mode === value))
+    : [];
+  if (modes.some((mode) => mode === undefined)) return null;
+  return modes
+    .filter((mode) => mode !== undefined)
+    .map((mode, index) =>
+      existing[index]?.mode === mode
+        ? existing[index]
+        : { id: crypto.randomUUID(), mode },
+    );
 }
 
 export function createSnapshot(state: Workspace): Snapshot {
@@ -113,8 +137,14 @@ function readWorkspace(initial: () => Workspace) {
   const legacy = decodeWorkspace(location.hash);
   if (legacy) return legacy;
   const color = colorFromHash(location.hash);
-  if (!color || colorHash(state.color) === location.hash) return state;
-  return { ...state, color, selected: null };
+  const pickers = pickersFromHash(location.hash, state.pickers);
+  return {
+    ...state,
+    ...(color && colorHash(state.color) !== colorHash(color)
+      ? { color, selected: null }
+      : {}),
+    pickers: pickers ?? state.pickers,
+  };
 }
 
 export function useWorkspace(initial: () => Workspace, shared?: Snapshot) {
@@ -123,12 +153,12 @@ export function useWorkspace(initial: () => Workspace, shared?: Snapshot) {
     return shared ? importSnapshot(shared, local) : local;
   });
   useLayoutEffect(
-    function persistColorInUrl() {
-      const hash = colorHash(state.color);
+    function persistColorAndPickersInUrl() {
+      const hash = workspaceHash(state);
       if (location.hash !== hash || location.pathname.startsWith("/share/"))
         history.replaceState(null, "", `/${location.search}${hash}`);
     },
-    [state.color],
+    [state.color, state.pickers],
   );
   useEffect(
     function persistWorkspaceLocally() {
@@ -149,8 +179,12 @@ export function useWorkspace(initial: () => Workspace, shared?: Snapshot) {
         return;
       }
       const color = colorFromHash(location.hash);
-      if (color)
-        setState((previous) => ({ ...previous, color, selected: null }));
+      setState((previous) => ({
+        ...previous,
+        ...(color ? { color, selected: null } : {}),
+        pickers:
+          pickersFromHash(location.hash, previous.pickers) ?? previous.pickers,
+      }));
     };
     window.addEventListener("popstate", restore);
     window.addEventListener("hashchange", restore);

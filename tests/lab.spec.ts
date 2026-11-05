@@ -32,14 +32,18 @@ test("browser sampling matches independent sRGB canvas, including alpha and out-
       ctx.fillRect(0, 0, 1, 1);
       return [...ctx.getImageData(0, 0, 1, 1).data];
     }, value);
-    const hex =
-      "#" +
-      expected
-        .slice(0, 3)
-        .map((n) => n.toString(16).padStart(2, "0"))
-        .join("") +
-      (expected[3] === 255 ? "" : expected[3].toString(16).padStart(2, "0"));
-    await expect(page.locator(".output-row").first()).toContainText(hex);
+    const actual = await page
+      .getByRole("button", { name: "sRGB preview", exact: true })
+      .locator(".swatch-color")
+      .evaluate((element) => {
+        const canvas = document.createElement("canvas");
+        canvas.width = canvas.height = 1;
+        const context = canvas.getContext("2d", { colorSpace: "srgb" })!;
+        context.fillStyle = getComputedStyle(element).backgroundColor;
+        context.fillRect(0, 0, 1, 1);
+        return [...context.getImageData(0, 0, 1, 1).data];
+      });
+    expect(actual).toEqual(expected);
   }
   await expect
     .poll(() =>

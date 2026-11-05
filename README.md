@@ -19,7 +19,7 @@ Open the local URL printed by Vite. Pick a theme color, adjust the plane or slid
 
 Use Add picker to open synchronized RGB, HSL, HCL, or OKHCL panels. Each panel has its own mode selector and close button. HCL uses CIELCH D50; OKHCL uses OKLCH. RGB and HSL controls use the browser's sRGB result.
 
-The normal URL contains only the current color. Picker panels, theme edits, selected token, presets, preview width, and tab stay in browser storage and survive reloads. Share saves a snapshot of the current workspace and active preset, then creates a link you can open in another browser. It does not include other saved presets. Shared workspaces become local copies when opened. Existing workspace URLs still import their saved state. Built-in themes are protected. Use Save as new to keep an edited copy. The Brutalist theme uses square corners, hard shadows, and bright colors.
+The normal URL contains the current color and open picker modes. Theme edits, selected token, presets, preview width, and tab stay in browser storage and survive reloads. Share saves a snapshot of the current workspace and active preset, then creates a link you can open in another browser. It does not include other saved presets. Shared workspaces become local copies when opened. Existing workspace URLs still import their saved state. Built-in themes are protected. Use Save as new to keep an edited copy. The Brutalist theme uses square corners, hard shadows, and bright colors.
 
 Light and dark previews appear together, one above the other.
 
@@ -27,9 +27,9 @@ The ZIP contains standalone `index.html` and `dark.html` demos, compiled `styles
 
 ## Color formats
 
-Each picker has a matching CSS editor and an Editor % field beside it. Channel controls show native values and percentages together. Percentages use the slider ranges: RGB 100% means 255, CIELCH chroma 100% means 150, and OKLCH chroma 100% means 0.4. Hue 100% means 360 degrees. Percentage hue is editor notation. Copy CSS uses valid CSS for the picker’s color space.
+Each picker has a matching color editor with Editor % below it. RGB uses hex; the other pickers use their CSS color syntax. Channel controls show native values and percentages together. Percentages use the slider ranges: RGB 100% means 255, CIELCH chroma 100% means 150, and OKLCH chroma 100% means 0.4. Hue 100% means 360 degrees. Percentage hue is editor notation. The CSS editors use degrees for hue.
 
-CSS / display shows the native CSS color. Canvas / sRGB shows an 8-bit sRGB canvas readback. Wide-gamut displays may show a difference. RGB values and gamut mapping depend on the browser. Transparent pixels are quantized and may lose RGB precision during canvas readback.
+Display color shows the native CSS color. sRGB preview shows an 8-bit sRGB canvas readback. Hover or focus either swatch for details. Wide-gamut displays may show a difference. RGB values and gamut mapping depend on the browser. Transparent pixels are quantized and may lose RGB precision during canvas readback.
 
 ## Development
 

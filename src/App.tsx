@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import {
   ArrowDownToLine,
-  Copy,
   Plus,
   Save,
   Trash2,
@@ -15,7 +14,8 @@ import { zipSync, strToU8 } from "fflate";
 import { Button } from "./components/ui/button";
 import { Picker } from "./Picker";
 import { ColorEditors } from "./ColorEditors";
-import { pickerExpression } from "./pickerModes";
+import { ColorSwatches } from "./ColorSwatches";
+import { useAppUpdate } from "./useAppUpdate";
 import {
   cssColor,
   parseColor,
@@ -86,6 +86,7 @@ export function App({ shared }: { shared?: Snapshot }) {
   const { state, set } = useWorkspace(initialWorkspace, shared);
   const { saved, active, source, color, selected, tab, width, pickers } = state;
   const [message, setMessage] = useState("");
+  const updateAvailable = useAppUpdate();
   const [sharing, setSharing] = useState(false);
   const [shareUrl, setShareUrl] = useState("");
   const [shareError, setShareError] = useState("");
@@ -281,6 +282,14 @@ export function App({ shared }: { shared?: Snapshot }) {
               )}
               Share
             </Button>
+            {updateAvailable && (
+              <>
+                <span role="status">Update available</span>
+                <Button variant="outline" onClick={() => location.reload()}>
+                  Reload
+                </Button>
+              </>
+            )}
             {shareUrl && (
               <input
                 className="share-link"
@@ -351,50 +360,13 @@ export function App({ shared }: { shared?: Snapshot }) {
                 </button>
               </div>
               <Picker color={color} mode={panel.mode} onChange={update} />
-              <div className="swatches">
-                <div className="checker">
-                  <div style={{ background: cssColor(color) }}>
-                    <span>CSS / display</span>
-                  </div>
-                </div>
-                <div className="checker">
-                  <div style={{ background: sample?.rgb }}>
-                    <span>Canvas / sRGB</span>
-                  </div>
-                </div>
-              </div>
+              <ColorSwatches display={cssColor(color)} srgb={sample?.rgb} />
               <ColorEditors
                 key={panel.mode}
                 color={color}
                 mode={panel.mode}
                 onChange={update}
               />
-              <div className="output-row">
-                <span>{sample?.hex ?? "Canvas unavailable"}</span>
-                <button
-                  aria-label="Copy hex"
-                  onClick={() => sample && copy(sample.hex)}
-                >
-                  <Copy size={15} />
-                </button>
-              </div>
-              <div className="output-row">
-                <span>{sample?.rgb}</span>
-                <button
-                  aria-label="Copy RGB"
-                  onClick={() => sample && copy(sample.rgb)}
-                >
-                  <Copy size={15} />
-                </button>
-              </div>
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={() => copy(pickerExpression(color, panel.mode))}
-              >
-                <Copy size={15} />
-                Copy CSS
-              </Button>
             </section>
           ))}
         </aside>

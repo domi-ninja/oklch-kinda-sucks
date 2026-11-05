@@ -49,7 +49,9 @@ function ColorField({
       }}
     >
       <div className="color-field-heading">
-        <label htmlFor={id}>{percent ? "Editor %" : "CSS"}</label>
+        <label htmlFor={id}>
+          {percent ? "Editor %" : mode === "RGB" ? "Hex" : "CSS"}
+        </label>
         <button
           aria-label={percent ? "Apply percentage color" : "Apply color"}
           type="submit"
@@ -57,13 +59,12 @@ function ColorField({
           <Check size={16} />
         </button>
       </div>
-      <textarea
+      <input
         id={id}
         className="value-field"
         aria-label={`${name}${percent ? " percentage" : ""} value`}
         aria-invalid={!!error}
         aria-describedby={error ? `${id}-error` : undefined}
-        rows={3}
         value={value}
         spellCheck={false}
         onChange={(event) => {

@@ -4,7 +4,7 @@ import {
   type ServerResponse,
 } from "node:http";
 import { createReadStream, mkdirSync } from "node:fs";
-import { stat } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import { dirname, extname, resolve, sep } from "node:path";
 import { randomBytes } from "node:crypto";
 import { DatabaseSync } from "node:sqlite";
@@ -82,6 +82,13 @@ async function readSnapshot(request: IncomingMessage) {
 async function handle(request: IncomingMessage, response: ServerResponse) {
   response.setHeader("X-Content-Type-Options", "nosniff");
   const path = new URL(request.url ?? "/", "http://localhost").pathname;
+  if (path === "/api/version" && request.method === "GET") {
+    const html = await readFile(resolve(staticRoot, "index.html"), "utf8");
+    const entry = html.match(/<script\b[^>]*\bsrc="([^"]+)"/)?.[1];
+    if (!entry) throw new HttpError(503, "App is not built yet");
+    json(response, 200, { entry });
+    return;
+  }
   if (path === "/api/health" && request.method === "GET") {
     database.prepare("SELECT 1").get();
     json(response, 200, { ok: true });
@@ -127,7 +134,9 @@ async function handle(request: IncomingMessage, response: ServerResponse) {
     "Content-Length": info.size,
     "Cache-Control": path.startsWith("/assets/")
       ? "public, max-age=31536000, immutable"
-      : "no-cache",
+      : extname(file) === ".html"
+        ? "no-store"
+        : "no-cache",
   });
   if (request.method === "HEAD") response.end();
   else

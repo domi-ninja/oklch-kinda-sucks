@@ -61,7 +61,7 @@ test("sharing excludes other presets and importing preserves the receiver's save
   expect(colorFromHash("#0.6,0.2,30,50")).toEqual(workspace.color);
 });
 
-test("old workspace links migrate into browser storage and a color-only URL", async ({
+test("old workspace links migrate into browser storage and a color and picker URL", async ({
   page,
 }) => {
   await page.goto(`/#s=${encodeWorkspace(workspace)}`);
@@ -69,7 +69,7 @@ test("old workspace links migrate into browser storage and a color-only URL", as
   await expect(page.getByLabel("Tailwind theme stylesheet")).toHaveValue(
     workspace.source,
   );
-  await expect(page).toHaveURL(/\/#color=0\.6,0\.2,30,0\.5$/);
+  await expect(page).toHaveURL(/\/#color=0\.6,0\.2,30,0\.5&pickers=RGB,HSL$/);
   expect(
     await page.evaluate(
       (key) => JSON.parse(localStorage.getItem(key)!),

@@ -59,7 +59,7 @@ test("each editor parses its picker coordinates and alpha", () => {
   }
 });
 
-test("CSS and percentage editors stay visible, match the mode, and update the shared color", async ({
+test("color editors stay stacked, match the mode, and update the shared color", async ({
   page,
 }) => {
   await page.goto("/");
@@ -74,11 +74,11 @@ test("CSS and percentage editors stay visible, match the mode, and update the sh
     await expect(percent).toBeVisible();
     const cssBounds = (await css.boundingBox())!;
     const percentBounds = (await percent.boundingBox())!;
-    expect(cssBounds.y).toBe(percentBounds.y);
-    expect(percentBounds.x).toBeGreaterThan(cssBounds.x + cssBounds.width);
+    expect(percentBounds.y).toBeGreaterThan(cssBounds.y + cssBounds.height);
+    expect(percentBounds.x).toBe(cssBounds.x);
     await css.fill(
       mode === "RGB"
-        ? "rgb(128 128 128 / 0.5)"
+        ? "#808080"
         : mode === "HSL"
           ? "hsl(180 50% 50% / 0.5)"
           : mode === "HCL"
@@ -86,10 +86,12 @@ test("CSS and percentage editors stay visible, match the mode, and update the sh
             : "oklch(0.6 0.1 180 / 50%)",
     );
     await css.press("Enter");
-    await expect(percent).toHaveValue(/\/ 50%\)$/);
+    await expect(percent).toHaveValue(
+      mode === "RGB" ? /\/ 100%\)$/ : /\/ 50%\)$/,
+    );
     await expect(
       page.getByRole("spinbutton", { name: "Alpha value", exact: true }),
-    ).toHaveValue("0.5");
+    ).toHaveValue(mode === "RGB" ? "1" : "0.5");
     await percent.fill(`${cssFunctions[mode]}(50% 25% 50% / 75%)`);
     await page
       .getByRole("button", { name: "Apply percentage color", exact: true })
@@ -100,7 +102,11 @@ test("CSS and percentage editors stay visible, match the mode, and update the sh
     await expect(
       page.getByRole("spinbutton", { name: "Alpha percentage", exact: true }),
     ).toHaveValue("75");
-    await expect(css).toHaveValue(new RegExp(`^${cssFunctions[mode]}\\(`));
+    await expect(css).toHaveValue(
+      mode === "RGB"
+        ? /^#[0-9a-f]{6,8}$/
+        : new RegExp(`^${cssFunctions[mode]}\\(`),
+    );
   }
 });
 
@@ -144,7 +150,11 @@ test("all modes share one color, fill their planes, and close independently", as
       page.getByLabel(`${cssFunctions[mode].toUpperCase()} value`, {
         exact: true,
       }),
-    ).toHaveValue(new RegExp(`^${cssFunctions[mode]}\\(`));
+    ).toHaveValue(
+      mode === "RGB"
+        ? /^#[0-9a-f]{6,8}$/
+        : new RegExp(`^${cssFunctions[mode]}\\(`),
+    );
     expect((await readWorkspace(page)).color).toEqual(original);
     await expect
       .poll(() =>
@@ -183,9 +193,12 @@ test("all modes share one color, fill their planes, and close independently", as
     .getByRole("spinbutton", { name: "Lightness value", exact: true })
     .fill("50");
   for (let i = 0; i < 4; i++)
-    await expect(panels.nth(i).locator(".output-row").first()).toContainText(
-      "#00ff00",
-    );
+    await expect(
+      panels
+        .nth(i)
+        .getByRole("button", { name: "sRGB preview", exact: true })
+        .locator(".swatch-color"),
+    ).toHaveAttribute("style", /background: rgb\(0,\s*255,\s*0\)/);
   const bounds = await panels.evaluateAll((elements) =>
     elements.map((el) => {
       const r = el.getBoundingClientRect();
@@ -207,9 +220,12 @@ test("all modes share one color, fill their planes, and close independently", as
   await expect(panels).toHaveCount(0);
   await page.getByRole("button", { name: "Add picker" }).click();
   await expect(panels).toHaveCount(1);
-  await expect(panels.first().locator(".output-row").first()).toContainText(
-    "#00ff00",
-  );
+  await expect(
+    panels
+      .first()
+      .getByRole("button", { name: "sRGB preview", exact: true })
+      .locator(".swatch-color"),
+  ).toHaveAttribute("style", /background: rgb\(0,\s*255,\s*0\)/);
 });
 
 test("Share exports the active workspace to another browser", async ({
@@ -273,7 +289,7 @@ test("Share exports the active workspace to another browser", async ({
   await context.close();
 });
 
-test("only color goes in the URL; the workspace stays local", async ({
+test("color and open picker modes go in the URL; the workspace stays local", async ({
   page,
   browser,
 }) => {
@@ -289,7 +305,7 @@ test("only color goes in the URL; the workspace stays local", async ({
     .getByLabel("Picker mode", { exact: true })
     .last()
     .selectOption("HSL");
-  expect(page.url()).toBe(first);
+  expect(new URL(page.url()).hash).toContain("pickers=OKHCL,HSL");
   await page
     .getByLabel("OKLCH value", { exact: true })
     .fill("oklch(0.6 0.2 30 / 50%)");
@@ -298,14 +314,14 @@ test("only color goes in the URL; the workspace stays local", async ({
     .first()
     .click();
   const second = page.url();
-  expect(new URL(second).hash).toBe("#color=0.6,0.2,30,0.5");
+  expect(new URL(second).hash).toBe("#color=0.6,0.2,30,0.5&pickers=OKHCL,HSL");
   await page.reload();
   await expect(page.locator(".color-panel")).toHaveCount(2);
   await expect(
     page.getByLabel("Picker mode", { exact: true }).last(),
   ).toHaveValue("HSL");
   await page.goto(first);
-  await expect(page.locator(".color-panel")).toHaveCount(2);
+  await expect(page.locator(".color-panel")).toHaveCount(1);
   expect(colorFromHash(new URL(page.url()).hash)).toEqual(
     colorFromHash(new URL(first).hash),
   );
@@ -322,7 +338,7 @@ test("only color goes in the URL; the workspace stays local", async ({
   const context = await browser.newContext();
   const other = await context.newPage();
   await other.goto(second);
-  await expect(other.locator(".color-panel")).toHaveCount(1);
+  await expect(other.locator(".color-panel")).toHaveCount(2);
   await expect(other.getByLabel("OKLCH value", { exact: true })).toHaveValue(
     "oklch(0.6 0.2 30 / 50%)",
   );

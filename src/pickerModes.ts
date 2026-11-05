@@ -22,6 +22,7 @@ export function pickerExpression(
   percent = false,
 ) {
   if (!percent) {
+    if (mode === "RGB") return sampleColor(cssColor(color)).hex;
     if (mode === "OKHCL") return cssColor(color);
     const [x, y, z] = coordinates(color, mode);
     return coordinateCss(
