@@ -34,7 +34,9 @@ test("built-ins stay protected and Brutalist can be saved as an editable copy", 
   }
   await selector.selectOption("brutalist");
   for (const mode of ["light", "dark"]) {
-    const frame = page.frameLocator(`iframe[title="Tailwind ${mode} preview"]`);
+    const frame = page.frameLocator(
+      `iframe[title="shadcn/ui ${mode} preview"]`,
+    );
     await expect(frame.getByRole("button", { name: "Open project" })).toHaveCSS(
       "border-radius",
       "0px",
@@ -73,7 +75,7 @@ test("built-ins stay protected and Brutalist can be saved as an editable copy", 
   await selector.selectOption("brutalist");
   await expect(
     page
-      .frameLocator('iframe[title="Tailwind light preview"]')
+      .frameLocator('iframe[title="shadcn/ui light preview"]')
       .getByRole("button", { name: "Open project" }),
   ).toHaveCSS("background-color", "oklch(0.88 0.23 128)");
 });

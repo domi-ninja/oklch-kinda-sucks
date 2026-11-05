@@ -16,7 +16,7 @@ export function demoDocument(
   const styles = externalStylesheet
     ? '<link rel="stylesheet" href="./styles.css">'
     : `<style>${css.replace(/<\/style/gi, "<\\/style")}</style>`;
-  return `<!doctype html><html lang="en" class="${dark ? "dark" : ""}"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Palette studio preview</title>${styles}</head><body>${demoBody}<script>${demoScript}</script></body></html>`;
+  return `<!doctype html><html lang="en" class="${dark ? "dark" : ""}"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>shadcn/ui ${dark ? "dark" : "light"} preview</title>${styles}</head><body>${demoBody}<script>${demoScript}</script></body></html>`;
 }
 export const candidates = [
   ...new Set(

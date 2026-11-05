@@ -51,7 +51,7 @@ test("mobile pickers use half-width columns and wrap their controls and theme to
     await alpha.press("Tab");
     for (const mode of ["light", "dark"]) {
       const frame = page.frameLocator(
-        `iframe[title="Tailwind ${mode} preview"]`,
+        `iframe[title="shadcn/ui ${mode} preview"]`,
       );
       await expect(
         frame.getByRole("button", { name: "Open project" }),
@@ -63,10 +63,10 @@ test("mobile pickers use half-width columns and wrap their controls and theme to
       ).toBe(true);
     }
     const lightPreview = (await page
-      .getByTitle("Tailwind light preview", { exact: true })
+      .getByTitle("shadcn/ui light preview", { exact: true })
       .boundingBox())!;
     const darkPreview = (await page
-      .getByTitle("Tailwind dark preview", { exact: true })
+      .getByTitle("shadcn/ui dark preview", { exact: true })
       .boundingBox())!;
     expect(darkPreview.x).toBe(lightPreview.x);
     expect(darkPreview.y).toBeGreaterThan(lightPreview.y + lightPreview.height);

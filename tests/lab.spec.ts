@@ -70,7 +70,7 @@ test("theme edits compile, presets persist, and exported app works offline", asy
   page,
 }) => {
   await page.goto("/");
-  const frame = page.frameLocator('iframe[title="Tailwind light preview"]');
+  const frame = page.frameLocator('iframe[title="shadcn/ui light preview"]');
   await expect(frame.getByRole("button", { name: "Open project" })).toHaveCSS(
     "background-color",
     /oklch/,
@@ -99,12 +99,12 @@ test("theme edits compile, presets persist, and exported app works offline", asy
   );
   await page.getByRole("tab", { name: "Theme CSS", exact: true }).click();
   await page
-    .getByLabel("Tailwind theme stylesheet")
+    .getByLabel("shadcn/ui theme stylesheet")
     .fill(
       '@import "tailwindcss"; @theme { --color-primary: oklch(0.5 0.1 200); } @theme { --radius-lg: 2rem; }',
     );
   await expect(page.getByRole("button", { name: "Export app" })).toBeEnabled();
-  await page.getByRole("tab", { name: "Preview", exact: true }).click();
+  await page.getByRole("tab", { name: "Components", exact: true }).click();
   await expect(frame.getByRole("button", { name: "Open project" })).toHaveCSS(
     "border-radius",
     "32px",
@@ -167,12 +167,12 @@ test("preset rename, save, delete and compiler recovery", async ({ page }) => {
   ).toHaveText("Renamed");
   await page.getByRole("tab", { name: "Theme CSS", exact: true }).click();
   await page
-    .getByLabel("Tailwind theme stylesheet")
+    .getByLabel("shadcn/ui theme stylesheet")
     .fill('@import "missing.css";');
   await expect(page.getByRole("alert")).toContainText("Unsupported import");
   await expect(page.getByRole("button", { name: "Export app" })).toBeDisabled();
   await page
-    .getByLabel("Tailwind theme stylesheet")
+    .getByLabel("shadcn/ui theme stylesheet")
     .fill(
       '@import "tailwindcss"; @theme { --color-primary: oklch(0.5 0.1 200); }',
     );
@@ -183,7 +183,7 @@ test("preset rename, save, delete and compiler recovery", async ({ page }) => {
     .getByLabel("Preset", { exact: true })
     .selectOption({ label: "Renamed" });
   await page.getByRole("tab", { name: "Theme CSS", exact: true }).click();
-  await expect(page.getByLabel("Tailwind theme stylesheet")).toHaveValue(
+  await expect(page.getByLabel("shadcn/ui theme stylesheet")).toHaveValue(
     /oklch\(0.5 0.1 200\)/,
   );
   page.once("dialog", (dialog) => dialog.accept());
@@ -197,8 +197,8 @@ test("light and dark previews stay stacked and both export offline", async ({
   page,
 }) => {
   await page.goto("/");
-  const light = page.frameLocator('iframe[title="Tailwind light preview"]');
-  const dark = page.frameLocator('iframe[title="Tailwind dark preview"]');
+  const light = page.frameLocator('iframe[title="shadcn/ui light preview"]');
+  const dark = page.frameLocator('iframe[title="shadcn/ui dark preview"]');
   await expect(light.locator("main")).toHaveCSS(
     "background-color",
     "oklch(0.985 0.002 180)",
@@ -210,10 +210,10 @@ test("light and dark previews stay stacked and both export offline", async ({
   await expect(light.locator("html")).toHaveCSS("color-scheme", "light");
   await expect(dark.locator("html")).toHaveCSS("color-scheme", "dark");
   const lightBounds = await page
-    .getByTitle("Tailwind light preview", { exact: true })
+    .getByTitle("shadcn/ui light preview", { exact: true })
     .boundingBox();
   const darkBounds = await page
-    .getByTitle("Tailwind dark preview", { exact: true })
+    .getByTitle("shadcn/ui dark preview", { exact: true })
     .boundingBox();
   expect(darkBounds!.x).toBe(lightBounds!.x);
   expect(darkBounds!.y).toBeGreaterThan(lightBounds!.y + lightBounds!.height);

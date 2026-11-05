@@ -564,7 +564,7 @@ export function App({ shared }: { shared?: Snapshot }) {
           </section>
           <section className="panel theme-panel">
             <div className="panel-heading">
-              <h2>Tailwind theme</h2>
+              <h2>shadcn/ui theme</h2>
               <span className="muted">{entries.length} colors</span>
             </div>
             <div className="token-list">
@@ -605,7 +605,7 @@ export function App({ shared }: { shared?: Snapshot }) {
         </div>
         <section className="panel preview-panel">
           <div className="panel-heading preview-heading">
-            <div className="tabs" role="tablist" aria-label="Preview views">
+            <div className="tabs" role="tablist" aria-label="shadcn/ui views">
               {(["preview", "source", "compiled"] as const).map((value) => (
                 <button
                   key={value}
@@ -614,10 +614,10 @@ export function App({ shared }: { shared?: Snapshot }) {
                   onClick={() => set("tab", value)}
                 >
                   {value === "preview"
-                    ? "Preview"
+                    ? "Components"
                     : value === "source"
                       ? "Theme CSS"
-                      : "Compiled CSS"}
+                      : "Generated CSS"}
                 </button>
               ))}
             </div>
@@ -626,7 +626,7 @@ export function App({ shared }: { shared?: Snapshot }) {
                 ? "Compiling…"
                 : compiled.error
                   ? "Compile error"
-                  : "Tailwind 4.3"}
+                  : "Ready"}
             </span>
           </div>
           {compiled.error && (
@@ -637,7 +637,7 @@ export function App({ shared }: { shared?: Snapshot }) {
           {tab === "preview" && (
             <>
               <div className="preview-toolbar">
-                <span>/ demo</span>
+                <span>shadcn/ui</span>
                 <select
                   aria-label="Preview width"
                   value={width}
@@ -660,7 +660,7 @@ export function App({ shared }: { shared?: Snapshot }) {
                       <h2>{mode.label}</h2>
                       <Button
                         variant="ghost"
-                        aria-label={`Open ${mode.label.toLowerCase()} preview`}
+                        aria-label={`Open shadcn/ui ${mode.label.toLowerCase()} preview`}
                         disabled={
                           !compiled.css || compiled.pending || !!compiled.error
                         }
@@ -679,7 +679,7 @@ export function App({ shared }: { shared?: Snapshot }) {
                       </Button>
                     </div>
                     <iframe
-                      title={`Tailwind ${mode.label.toLowerCase()} preview`}
+                      title={`shadcn/ui ${mode.label.toLowerCase()} preview`}
                       sandbox="allow-scripts"
                       srcDoc={demoDocument(compiled.css, false, mode.dark)}
                       style={{ width, maxWidth: "100%" }}
@@ -692,7 +692,7 @@ export function App({ shared }: { shared?: Snapshot }) {
           {tab === "source" && (
             <textarea
               className="code-editor"
-              aria-label="Tailwind theme stylesheet"
+              aria-label="shadcn/ui theme stylesheet"
               spellCheck={false}
               value={source}
               onChange={(e) => {
@@ -713,7 +713,9 @@ export function App({ shared }: { shared?: Snapshot }) {
             <Button
               variant="outline"
               disabled={!compiled.css || compiled.pending || !!compiled.error}
-              onClick={() => download("tailwind.css", compiled.css, "text/css")}
+              onClick={() =>
+                download("shadcn-theme.css", compiled.css, "text/css")
+              }
             >
               <ArrowDownToLine size={15} />
               CSS

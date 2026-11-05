@@ -66,7 +66,7 @@ test("old workspace links migrate into browser storage and a color and picker UR
 }) => {
   await page.goto(`/#s=${encodeWorkspace(workspace)}`);
   await expect(page.getByLabel("Picker mode", { exact: true })).toHaveCount(2);
-  await expect(page.getByLabel("Tailwind theme stylesheet")).toHaveValue(
+  await expect(page.getByLabel("shadcn/ui theme stylesheet")).toHaveValue(
     workspace.source,
   );
   await expect(page).toHaveURL(/\/#color=0\.6,0\.2,30,0\.5&pickers=RGB,HSL$/);
@@ -77,7 +77,7 @@ test("old workspace links migrate into browser storage and a color and picker UR
     ),
   ).toEqual(workspace);
   await page.reload();
-  await expect(page.getByLabel("Tailwind theme stylesheet")).toHaveValue(
+  await expect(page.getByLabel("shadcn/ui theme stylesheet")).toHaveValue(
     workspace.source,
   );
   await expect(page.getByLabel("Preset", { exact: true })).toHaveValue(

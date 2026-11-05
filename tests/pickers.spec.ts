@@ -246,7 +246,7 @@ test("Share exports the active workspace to another browser", async ({
     .selectOption("HCL");
   await page.getByLabel("Preview width", { exact: true }).selectOption("375px");
   await page.getByRole("tab", { name: "Theme CSS", exact: true }).click();
-  const editor = page.getByLabel("Tailwind theme stylesheet");
+  const editor = page.getByLabel("shadcn/ui theme stylesheet");
   await editor.fill(
     (await editor.inputValue()) + "\n@theme { --radius-lg: 2rem; }",
   );
@@ -278,18 +278,18 @@ test("Share exports the active workspace to another browser", async ({
       shared.getByLabel("Picker mode", { exact: true }).nth(index),
     ).toHaveValue(mode);
   expect(await readWorkspace(shared)).toEqual(snapshot);
-  await expect(shared.getByLabel("Tailwind theme stylesheet")).toHaveValue(
+  await expect(shared.getByLabel("shadcn/ui theme stylesheet")).toHaveValue(
     snapshot.source,
   );
   await shared.reload();
   expect(await readWorkspace(shared)).toEqual(snapshot);
-  await shared.getByRole("tab", { name: "Preview", exact: true }).click();
+  await shared.getByRole("tab", { name: "Components", exact: true }).click();
   await expect(shared.getByLabel("Preview width", { exact: true })).toHaveValue(
     "375px",
   );
   await expect(
     shared
-      .frameLocator('iframe[title="Tailwind dark preview"]')
+      .frameLocator('iframe[title="shadcn/ui dark preview"]')
       .locator("html"),
   ).toHaveClass("dark");
   await context.close();

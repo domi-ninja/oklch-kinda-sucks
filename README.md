@@ -1,8 +1,8 @@
 # OKLCH kinda sucks
 
-An OKLCH picker and Tailwind theme editor that uses the current browser to render colors.
+An OKLCH picker and shadcn/ui theme editor that uses the current browser to render colors.
 
-![Synchronized HSL, HCL, and OKHCL pickers beside a Tailwind theme](public/cover.png)
+![Synchronized HSL, HCL, and OKHCL pickers beside a shadcn/ui theme](public/cover.png)
 
 Open [color.domi.ninja](https://color.domi.ninja), select a theme color, and adjust it with any picker. Add more pickers to compare color spaces. Light and dark previews update together. Copy the URL to share the color. Use Share to create a link to the current workspace.
 
