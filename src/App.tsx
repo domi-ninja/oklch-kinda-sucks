@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import {
   ArrowDownToLine,
-  Check,
   Copy,
   Plus,
   Save,
@@ -13,9 +12,10 @@ import {
 import { zipSync, strToU8 } from "fflate";
 import { Button } from "./components/ui/button";
 import { Picker } from "./Picker";
+import { ColorEditors } from "./ColorEditors";
+import { pickerExpression } from "./pickerModes";
 import {
   cssColor,
-  percentColor,
   parseColor,
   sampleColor,
   initialColor,
@@ -81,8 +81,6 @@ function initialWorkspace(): Workspace {
     source: saved[0]?.source ?? defaults[0].source,
     color,
     selected: null,
-    input: cssColor(color),
-    format: "css",
     tab: "preview",
     width: "100%",
     pickers: [{ id: "initial", mode: "OKHCL" }],
@@ -90,20 +88,8 @@ function initialWorkspace(): Workspace {
 }
 export function App() {
   const { state, set } = useWorkspace(initialWorkspace);
-  const {
-    saved,
-    active,
-    source,
-    color,
-    selected,
-    input,
-    format,
-    tab,
-    width,
-    pickers,
-  } = state;
+  const { saved, active, source, color, selected, tab, width, pickers } = state;
   const [message, setMessage] = useState("");
-  const [inputError, setInputError] = useState("");
   const compiled = useCompiler(source);
   const entries = useMemo(
     () =>
@@ -150,8 +136,6 @@ export function App() {
   const dirty = source !== saved.find((p) => p.id === active)?.source;
   const update = (next: Color) => {
     set("color", next);
-    set("input", format === "css" ? cssColor(next) : percentColor(next));
-    setInputError("");
     if (selected !== null && entries[selected]) {
       const entry = entries[selected];
       set(
@@ -340,54 +324,12 @@ export function App() {
                   </div>
                 </div>
               </div>
-              <div className="format-switch">
-                <button
-                  aria-pressed={format === "css"}
-                  onClick={() => {
-                    set("format", "css");
-                    set("input", cssColor(color));
-                  }}
-                >
-                  CSS
-                </button>
-                <button
-                  aria-pressed={format === "percent"}
-                  onClick={() => {
-                    set("format", "percent");
-                    set("input", percentColor(color));
-                  }}
-                >
-                  Editor %
-                </button>
-              </div>
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  const parsed = parseColor(input);
-                  if (parsed) update(parsed);
-                  else
-                    setInputError(
-                      "Enter OKLCH with L 0–1, C 0–0.4, hue in degrees, or editor percentages.",
-                    );
-                }}
-              >
-                <div className="value-field">
-                  <input
-                    aria-label="OKLCH value"
-                    value={input}
-                    onChange={(e) => set("input", e.target.value)}
-                    spellCheck={false}
-                  />
-                  <button aria-label="Apply color" type="submit">
-                    <Check size={16} />
-                  </button>
-                </div>
-                {inputError && (
-                  <p role="alert" className="error">
-                    {inputError}
-                  </p>
-                )}
-              </form>
+              <ColorEditors
+                key={panel.mode}
+                color={color}
+                mode={panel.mode}
+                onChange={update}
+              />
               <div className="output-row">
                 <span>{sample?.hex ?? "Canvas unavailable"}</span>
                 <button
@@ -409,7 +351,7 @@ export function App() {
               <Button
                 variant="outline"
                 className="w-full"
-                onClick={() => copy(cssColor(color))}
+                onClick={() => copy(pickerExpression(color, panel.mode))}
               >
                 <Copy size={15} />
                 Copy CSS
@@ -528,12 +470,6 @@ export function App() {
                         }
                         set("selected", i);
                         set("color", next);
-                        set(
-                          "input",
-                          format === "css"
-                            ? cssColor(next)
-                            : percentColor(next),
-                        );
                       }}
                     >
                       <span className="token-swatch checker">

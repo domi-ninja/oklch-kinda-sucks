@@ -124,7 +124,7 @@ h2 {
 }
 .slider-row {
   display: grid;
-  grid-template-columns: 74px minmax(0, 1fr) 69px;
+  grid-template-columns: 74px minmax(0, 1fr) 69px 69px;
   gap: 8px;
   align-items: center;
   margin-bottom: 16px;
@@ -204,35 +204,37 @@ input[type="range"]::-moz-range-thumb {
   border-radius: 3px;
   color: #202020;
 }
-.format-switch {
-  display: flex;
+.color-editors {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
   padding: 0 16px;
-  gap: 16px;
+}
+.color-editors form {
+  min-width: 0;
+}
+.color-field-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   margin-bottom: 8px;
 }
-.format-switch button {
-  padding: 4px 0;
-  color: #414141;
-}
-.format-switch button[aria-pressed="true"] {
-  color: #202020;
-  border-bottom: 2px solid #202020;
+.color-field-heading button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  min-height: 24px;
 }
 .value-field {
-  margin: 0 16px;
-  border: 1px solid #838383;
-  display: flex;
-  border-radius: 4px;
-  padding: 8px;
-  gap: 4px;
-}
-.value-field input {
   width: 100%;
   min-width: 0;
-  font-size: 11px;
-}
-.value-field button {
-  min-width: 24px;
+  border: 1px solid #838383;
+  display: block;
+  border-radius: 4px;
+  padding: 8px;
+  resize: vertical;
+  overflow-wrap: anywhere;
 }
 .output-row {
   display: flex;
@@ -428,9 +430,6 @@ select {
   select,
   textarea {
     font-size: 16px;
-  }
-  .value-field input {
-    font-size: 12px;
   }
 }
 

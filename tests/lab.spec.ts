@@ -41,15 +41,19 @@ test("browser sampling matches independent sRGB canvas, including alpha and out-
       (expected[3] === 255 ? "" : expected[3].toString(16).padStart(2, "0"));
     await expect(page.locator(".output-row").first()).toContainText(hex);
   }
-  const alpha = await page.locator("canvas").evaluate((c) => {
-    if (!(c instanceof HTMLCanvasElement)) throw new Error("Expected canvas");
-    const ctx = c.getContext("2d")!;
-    const data = ctx.getImageData(0, 0, c.width, c.height).data;
-    return Array.from(data)
-      .filter((_, i) => i % 4 === 3)
-      .every((a) => a === 255);
-  });
-  expect(alpha).toBe(true);
+  await expect
+    .poll(() =>
+      page.locator("canvas").evaluate((c) => {
+        if (!(c instanceof HTMLCanvasElement))
+          throw new Error("Expected canvas");
+        const ctx = c.getContext("2d")!;
+        const data = ctx.getImageData(0, 0, c.width, c.height).data;
+        return Array.from(data)
+          .filter((_, i) => i % 4 === 3)
+          .every((a) => a === 255);
+      }),
+    )
+    .toBe(true);
   await page.getByLabel("OKLCH value", { exact: true }).fill("nope");
   await page.getByRole("button", { name: "Apply color" }).click();
   await expect(page.getByRole("alert")).toBeVisible();

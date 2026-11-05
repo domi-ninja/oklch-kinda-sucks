@@ -19,8 +19,6 @@ const schema = z.object({
     a: z.number().min(0).max(1),
   }),
   selected: z.number().int().nonnegative().nullable(),
-  input: z.string(),
-  format: z.enum(["css", "percent"]),
   tab: z.enum(["preview", "source", "compiled"]),
   width: z.enum(["100%", "375px", "768px"]),
   pickers: z.array(z.object({ id: z.string(), mode: z.enum(pickerModes) })),

@@ -18,29 +18,46 @@ export function Picker({
   onChange: (color: Color) => void;
 }) {
   const canvas = useRef<HTMLCanvasElement>(null);
+  const requestPlane = useRef<(mode: PickerMode, fixed: number) => void>(
+    () => {},
+  );
   const id = useId();
   const values = coordinates(color, mode);
   const config = channels[mode];
   const xAxis = mode === "RGB" ? 0 : 1;
   const yAxis = mode === "RGB" ? 1 : 2;
   const fixed = values[mode === "RGB" ? 2 : 0];
+  useEffect(function startPlaneRenderer() {
+    const context = canvas.current?.getContext("2d", { colorSpace: "srgb" });
+    if (!context) return;
+    const worker = new Worker(new URL("./plane.worker.ts", import.meta.url), {
+      type: "module",
+    });
+    let painting: PickerMode | null = null;
+    let pending: { mode: PickerMode; fixed: number } | null = null;
+    const paint = () => {
+      if (painting || !pending) return;
+      painting = pending.mode;
+      worker.postMessage(pending);
+      pending = null;
+    };
+    worker.onmessage = (event: MessageEvent<ImageBitmap>) => {
+      // Keep dragging visible while the latest plane paints; never queue old frames.
+      if (!pending || pending.mode === painting)
+        context.drawImage(event.data, 0, 0);
+      painting = null;
+      event.data.close();
+      paint();
+    };
+    requestPlane.current = (mode, fixed) => {
+      pending = { mode, fixed };
+      paint();
+    };
+    return () => worker.terminate();
+  }, []);
   useEffect(
     function paintBrowserPlane() {
-      const ctx = canvas.current?.getContext("2d", { colorSpace: "srgb" });
-      if (!ctx) return;
-      for (let y = 0; y < 160; y++)
-        for (let x = 0; x < 256; x++) {
-          const point: Coordinates =
-            mode === "RGB"
-              ? [(x / 255) * 255, (1 - y / 159) * 255, fixed]
-              : [
-                  fixed,
-                  (x / 255) * channels[mode][1].max,
-                  (1 - y / 159) * channels[mode][2].max,
-                ];
-          ctx.fillStyle = coordinateCss(point, mode);
-          ctx.fillRect(x, y, 1, 1);
-        }
+      requestPlane.current(mode, fixed);
     },
     [mode, fixed],
   );
@@ -79,19 +96,7 @@ export function Picker({
       change: (a: number) => onChange({ ...color, a }),
       paint: (a: number) => cssColor({ ...color, a }),
     },
-  ].map((dimension) => {
-    if (mode !== "OKHCL") return dimension;
-    const scale = 100 / dimension.max;
-    return {
-      ...dimension,
-      max: 100,
-      step: 0.1,
-      unit: "%",
-      value: dimension.value * scale,
-      change: (value: number) => dimension.change(value / scale),
-      paint: (value: number) => dimension.paint(value / scale),
-    };
-  });
+  ];
   return (
     <div className="picker">
       <div
@@ -129,13 +134,13 @@ export function Picker({
             aria-label={name}
             type="range"
             min="0"
-            max={Math.max(max, value)}
-            step={step}
-            value={value}
+            max={Math.max(100, (value / max) * 100)}
+            step={0.1}
+            value={(value / max) * 100}
             style={{
               backgroundImage: `linear-gradient(to right, ${Array.from({ length: 37 }, (_, i) => paint((i / 36) * Math.max(max, value))).join(",")})`,
             }}
-            onChange={(e) => change(Number(e.target.value))}
+            onChange={(e) => change((Number(e.target.value) / 100) * max)}
           />
           <label className="number">
             <input
@@ -155,6 +160,30 @@ export function Picker({
               }
             />
             <span>{unit}</span>
+          </label>
+          <label className="number">
+            <input
+              aria-label={`${name} percentage`}
+              type="number"
+              min="0"
+              max={Math.max(100, (value / max) * 100)}
+              step={0.1}
+              value={round((value / max) * 100, 3)}
+              onChange={(e) =>
+                change(
+                  (Math.max(
+                    0,
+                    Math.min(
+                      Math.max(100, (value / max) * 100),
+                      Number(e.target.value),
+                    ),
+                  ) /
+                    100) *
+                    max,
+                )
+              }
+            />
+            <span>%</span>
           </label>
         </div>
       ))}

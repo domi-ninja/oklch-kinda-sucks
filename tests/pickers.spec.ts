@@ -1,6 +1,11 @@
 import { test, expect } from "@playwright/test";
 import { decodeWorkspace } from "../src/workspace";
-import { fromCoordinates } from "../src/pickerModes";
+import {
+  cssFunctions,
+  fromCoordinates,
+  parsePickerExpression,
+} from "../src/pickerModes";
+import { pickerModes } from "../src/workspace";
 
 test("RGB, HSL and CIELCH conversions preserve the color and alpha", () => {
   const rgb = fromCoordinates([255, 0, 0], "RGB", 0.5);
@@ -16,30 +21,135 @@ test("RGB, HSL and CIELCH conversions preserve the color and alpha", () => {
   expect(rgb.a).toBe(0.5);
 });
 
+test("each editor parses its picker coordinates and alpha", () => {
+  for (const [mode, css, percent, values] of [
+    ["RGB", "rgb(255 0 0 / 0.5)", "rgb(100% 0% 0% / 50%)", [255, 0, 0]],
+    ["HSL", "hsl(180 50% 25% / 0.5)", "hsl(50% 50% 25% / 50%)", [180, 50, 25]],
+    ["HCL", "lch(60 75 180 / 0.5)", "lch(60% 50% 50% / 50%)", [180, 75, 60]],
+    [
+      "OKHCL",
+      "oklch(0.6 0.2 180 / 50%)",
+      "oklch(60% 50% 50% / 50%)",
+      [180, 0.2, 0.6],
+    ],
+  ] as const) {
+    const expected = fromCoordinates([...values], mode, 0.5);
+    for (const parsed of [
+      parsePickerExpression(css, mode),
+      parsePickerExpression(percent, mode, true),
+    ]) {
+      expect(parsed).not.toBeNull();
+      for (const channel of ["l", "c", "h", "a"] as const)
+        expect(parsed![channel]).toBeCloseTo(expected[channel], 6);
+    }
+    expect(parsePickerExpression("invalid", mode)).toBeNull();
+    expect(
+      parsePickerExpression(percent.replace("50%)", "101%)"), mode, true),
+    ).toBeNull();
+  }
+});
+
+test("CSS and percentage editors stay visible, match the mode, and update the shared color", async ({
+  page,
+}) => {
+  await page.goto("/");
+  for (const mode of pickerModes) {
+    await page.getByLabel("Picker mode", { exact: true }).selectOption(mode);
+    const name = cssFunctions[mode].toUpperCase();
+    const css = page.getByLabel(`${name} value`, { exact: true });
+    const percent = page.getByLabel(`${name} percentage value`, {
+      exact: true,
+    });
+    await expect(css).toBeVisible();
+    await expect(percent).toBeVisible();
+    const cssBounds = (await css.boundingBox())!;
+    const percentBounds = (await percent.boundingBox())!;
+    expect(cssBounds.y).toBe(percentBounds.y);
+    expect(percentBounds.x).toBeGreaterThan(cssBounds.x + cssBounds.width);
+    await css.fill(
+      mode === "RGB"
+        ? "rgb(128 128 128 / 0.5)"
+        : mode === "HSL"
+          ? "hsl(180 50% 50% / 0.5)"
+          : mode === "HCL"
+            ? "lch(60 40 180 / 0.5)"
+            : "oklch(0.6 0.1 180 / 50%)",
+    );
+    await css.press("Enter");
+    await expect(percent).toHaveValue(/\/ 50%\)$/);
+    await expect(
+      page.getByRole("spinbutton", { name: "Alpha value", exact: true }),
+    ).toHaveValue("0.5");
+    await percent.fill(`${cssFunctions[mode]}(50% 25% 50% / 75%)`);
+    await page
+      .getByRole("button", { name: "Apply percentage color", exact: true })
+      .click();
+    await expect(
+      page.getByRole("spinbutton", { name: "Alpha value", exact: true }),
+    ).toHaveValue("0.75");
+    await expect(
+      page.getByRole("spinbutton", { name: "Alpha percentage", exact: true }),
+    ).toHaveValue("75");
+    await expect(css).toHaveValue(new RegExp(`^${cssFunctions[mode]}\\(`));
+  }
+});
+
+test("plane rendering catches up to the latest hue after rapid changes", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const hue = page.getByRole("spinbutton", {
+    name: "Hue percentage",
+    exact: true,
+  });
+  for (const value of [10, 40, 60, 80]) await hue.fill(String(value));
+  await expect
+    .poll(() =>
+      page.locator("canvas").evaluate((canvas) => {
+        if (!(canvas instanceof HTMLCanvasElement))
+          throw new Error("Expected canvas");
+        const context = canvas.getContext("2d")!;
+        const actual = [...context.getImageData(128, 80, 1, 1).data];
+        const reference = document.createElement("canvas").getContext("2d")!;
+        reference.fillStyle = `oklch(${1 - 80 / 159} ${(128 / 255) * 0.4} 288)`;
+        reference.fillRect(0, 0, 1, 1);
+        return actual.every(
+          (value, index) =>
+            value === reference.getImageData(0, 0, 1, 1).data[index],
+        );
+      }),
+    )
+    .toBe(true);
+});
+
 test("all modes share one color, fill their planes, and close independently", async ({
   page,
 }) => {
   await page.goto("/");
-  const original = await page
-    .getByLabel("OKLCH value", { exact: true })
-    .inputValue();
-  for (const mode of ["RGB", "HSL", "HCL", "OKHCL"]) {
+  await expect(page.getByLabel("Picker mode", { exact: true })).toBeVisible();
+  const original = decodeWorkspace(new URL(page.url()).hash)!.color;
+  for (const mode of pickerModes) {
     await page.getByLabel("Picker mode", { exact: true }).selectOption(mode);
-    await expect(page.getByLabel("OKLCH value", { exact: true })).toHaveValue(
-      original,
-    );
-    expect(
-      await page.locator("canvas").evaluate((element) => {
-        if (!(element instanceof HTMLCanvasElement))
-          throw new Error("Expected canvas");
-        const data = element
-          .getContext("2d")!
-          .getImageData(0, 0, element.width, element.height).data;
-        return Array.from(data).every(
-          (channel, i) => i % 4 !== 3 || channel === 255,
-        );
+    await expect(
+      page.getByLabel(`${cssFunctions[mode].toUpperCase()} value`, {
+        exact: true,
       }),
-    ).toBe(true);
+    ).toHaveValue(new RegExp(`^${cssFunctions[mode]}\\(`));
+    expect(decodeWorkspace(new URL(page.url()).hash)!.color).toEqual(original);
+    await expect
+      .poll(() =>
+        page.locator("canvas").evaluate((element) => {
+          if (!(element instanceof HTMLCanvasElement))
+            throw new Error("Expected canvas");
+          const data = element
+            .getContext("2d")!
+            .getImageData(0, 0, element.width, element.height).data;
+          return Array.from(data).every(
+            (channel, i) => i % 4 !== 3 || channel === 255,
+          );
+        }),
+      )
+      .toBe(true);
   }
   for (const mode of ["RGB", "HSL", "HCL"]) {
     await page.getByRole("button", { name: "Add picker", exact: true }).click();
@@ -120,10 +230,6 @@ test("URL restores the entire unsaved workspace without browser storage", async 
     .getByRole("button", { name: "Apply color", exact: true })
     .first()
     .click();
-  await page
-    .getByRole("button", { name: "Editor %", exact: true })
-    .first()
-    .click();
   const url = page.url();
   const snapshot = decodeWorkspace(new URL(url).hash)!;
   expect(snapshot.pickers.map((p) => p.mode)).toEqual(["OKHCL", "HCL"]);
@@ -190,27 +296,27 @@ test("OKHCL percentages control native color coordinates and survive URL restora
     ).toHaveAttribute("max", "100");
     await expect(
       page
-        .getByRole("spinbutton", { name: `${name} value`, exact: true })
+        .getByRole("spinbutton", { name: `${name} percentage`, exact: true })
         .locator(".."),
     ).toContainText("%");
   }
   await expect(
-    page.getByRole("spinbutton", { name: "Lightness value", exact: true }),
+    page.getByRole("spinbutton", { name: "Lightness percentage", exact: true }),
   ).toHaveValue("94.03");
   await expect(
-    page.getByRole("spinbutton", { name: "Chroma value", exact: true }),
+    page.getByRole("spinbutton", { name: "Chroma percentage", exact: true }),
   ).toHaveValue("25");
   await page
-    .getByRole("spinbutton", { name: "Hue value", exact: true })
+    .getByRole("spinbutton", { name: "Hue percentage", exact: true })
     .fill("50");
   await page
-    .getByRole("spinbutton", { name: "Chroma value", exact: true })
+    .getByRole("spinbutton", { name: "Chroma percentage", exact: true })
     .fill("60");
   await page
-    .getByRole("spinbutton", { name: "Lightness value", exact: true })
+    .getByRole("spinbutton", { name: "Lightness percentage", exact: true })
     .fill("70");
   await page
-    .getByRole("spinbutton", { name: "Alpha value", exact: true })
+    .getByRole("spinbutton", { name: "Alpha percentage", exact: true })
     .fill("50");
   await expect(page.getByLabel("OKLCH value", { exact: true })).toHaveValue(
     "oklch(0.7 0.24 180 / 50%)",
@@ -220,23 +326,23 @@ test("OKHCL percentages control native color coordinates and survive URL restora
     .getByRole("slider", { name: "Hue", exact: true })
     .press("ArrowRight");
   await expect(
-    page.getByRole("spinbutton", { name: "Hue value", exact: true }),
+    page.getByRole("spinbutton", { name: "Hue percentage", exact: true }),
   ).toHaveValue("50.1");
   expect(decodeWorkspace(new URL(page.url()).hash)?.color.h).toBeCloseTo(
     180.36,
   );
   await page.reload();
   await expect(
-    page.getByRole("spinbutton", { name: "Hue value", exact: true }),
+    page.getByRole("spinbutton", { name: "Hue percentage", exact: true }),
   ).toHaveValue("50.1");
   await expect(
-    page.getByRole("spinbutton", { name: "Chroma value", exact: true }),
+    page.getByRole("spinbutton", { name: "Chroma percentage", exact: true }),
   ).toHaveValue("60");
   await expect(
-    page.getByRole("spinbutton", { name: "Lightness value", exact: true }),
+    page.getByRole("spinbutton", { name: "Lightness percentage", exact: true }),
   ).toHaveValue("70");
   await expect(
-    page.getByRole("spinbutton", { name: "Alpha value", exact: true }),
+    page.getByRole("spinbutton", { name: "Alpha percentage", exact: true }),
   ).toHaveValue("50");
   await page.getByLabel("Picker mode", { exact: true }).selectOption("HCL");
   await expect(
@@ -246,6 +352,6 @@ test("OKHCL percentages control native color coordinates and survive URL restora
   ).toContainText("°");
   await page.getByLabel("Picker mode", { exact: true }).selectOption("OKHCL");
   await expect(
-    page.getByRole("spinbutton", { name: "Hue value", exact: true }),
+    page.getByRole("spinbutton", { name: "Hue percentage", exact: true }),
   ).toHaveValue("50.1");
 });
