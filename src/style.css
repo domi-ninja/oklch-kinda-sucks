@@ -437,14 +437,11 @@ select {
 .preview-toolbar {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   padding: 8px 16px;
   gap: 8px;
   background: #aaaaaa;
   border-bottom: 1px solid #9d9d9d;
-}
-.preview-toolbar > span {
-  flex: 1;
-  color: #414141;
 }
 .iframe-wrap {
   background: #919191;

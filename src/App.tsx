@@ -619,7 +619,6 @@ export function App({ shared }: { shared?: Snapshot }) {
           {tab === "preview" && (
             <>
               <div className="preview-toolbar">
-                <span>shadcn/ui</span>
                 <select
                   aria-label="Preview width"
                   value={width}
