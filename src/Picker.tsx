@@ -1,10 +1,11 @@
-import { useId } from "react";
+import { useId, useMemo } from "react";
 import { ColorPlane } from "./ColorPlane";
 import { pickerPlanes } from "./planes";
 import { usePlaneRenderer } from "./usePlaneRenderer";
 import { type Color, cssColor, round } from "./color";
 import type { PickerMode } from "./workspace";
 import { NumericInput } from "./NumericInput";
+import { projectPalette, type PaletteEditor } from "./palette";
 import {
   channels,
   coordinates,
@@ -16,15 +17,21 @@ export function Picker({
   color,
   mode = "OKHCL",
   onChange,
+  palette,
 }: {
   color: Color;
   mode?: PickerMode;
   onChange: (color: Color) => void;
+  palette?: PaletteEditor;
 }) {
   const id = useId();
   const values = coordinates(color, mode);
   const config = channels[mode];
   const render = usePlaneRenderer();
+  const projection = useMemo(
+    () => (palette ? projectPalette(palette, mode) : undefined),
+    [palette?.colors, palette?.path, mode],
+  );
   const dimensions = [
     ...config.map((channel, index) => ({
       ...channel,
@@ -62,6 +69,9 @@ export function Picker({
             mapping={mapping}
             render={render}
             onChange={onChange}
+            palette={
+              palette && projection ? { ...palette, ...projection } : undefined
+            }
           />
         ))}
       </div>

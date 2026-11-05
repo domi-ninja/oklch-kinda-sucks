@@ -21,6 +21,8 @@ Use Add picker to open synchronized RGB, HSL, HCL, or OKHCL panels. Each panel h
 
 The normal URL contains the current color and open picker modes. Theme edits, selected token, presets, preview width, and tab stay in browser storage and survive reloads. Share saves a snapshot of the current workspace and active preset, then creates a link you can open in another browser. It does not include other saved presets. Shared workspaces become local copies when opened. Existing workspace URLs still import their saved state. Built-in themes are protected. Use Save as new to keep an edited copy. The Brutalist theme uses square corners, hard shadows, and bright colors.
 
+Use Create palette to add a second color. Select Start or End, or drag its S or E circle on a picker. Subdivisions set the number of intervals, so four subdivisions produce five colors. Choose RGB, HSL, HCL, or OKHCL for interpolation. Hue takes the shorter route around the circle. Intermediate markers cannot be edited. Copy palette copies CSS variables for the generated colors. Palettes save in browser storage and are included in Share snapshots.
+
 Light and dark previews appear together, one above the other.
 
 The ZIP contains standalone `index.html` and `dark.html` demos, compiled `styles.css`, editable `theme.css`, and a rebuildable demo in `src/index.html`. Run `npm install && npm run build` in the extracted folder to rebuild the CSS after editing the theme.

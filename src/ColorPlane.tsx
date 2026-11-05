@@ -1,9 +1,20 @@
 import { useEffect, useId, useRef } from "react";
 import { cssColor, round, type Color } from "./color";
 import { channels, fromCoordinates, type Coordinates } from "./pickerModes";
+import { palettePaths, type PlanePalette } from "./palette";
 import type { PlaneMapping } from "./planes";
-import type { PickerMode } from "./workspaceSchema";
+import type { PaletteEndpoint, PickerMode } from "./workspaceSchema";
 import type { usePlaneRenderer } from "./usePlaneRenderer";
+
+function endpointFromTarget(
+  target: EventTarget | null,
+): PaletteEndpoint | null {
+  if (!(target instanceof Element)) return null;
+  const endpoint = target
+    .closest("[data-palette-endpoint]")
+    ?.getAttribute("data-palette-endpoint");
+  return endpoint === "start" || endpoint === "end" ? endpoint : null;
+}
 
 export function ColorPlane({
   color,
@@ -12,6 +23,7 @@ export function ColorPlane({
   mapping,
   render,
   onChange,
+  palette,
 }: {
   color: Color;
   mode: PickerMode;
@@ -19,8 +31,10 @@ export function ColorPlane({
   mapping: PlaneMapping;
   render: ReturnType<typeof usePlaneRenderer>;
   onChange: (color: Color) => void;
+  palette?: PlanePalette;
 }) {
   const canvas = useRef<HTMLCanvasElement>(null);
+  const dragging = useRef<PaletteEndpoint | null>(null);
   const captionId = useId();
   const config = channels[mode];
   const fixedValue = values[mapping.fixed];
@@ -32,9 +46,31 @@ export function ColorPlane({
     [mode, mapping, fixedValue, render],
   );
 
-  const move = (event: React.PointerEvent<HTMLDivElement>) => {
+  const position = (point: Coordinates) => ({
+    x: Math.max(
+      0,
+      Math.min(100, (point[mapping.x] / config[mapping.x].max) * 100),
+    ),
+    y: Math.max(
+      0,
+      Math.min(100, (1 - point[mapping.y] / config[mapping.y].max) * 100),
+    ),
+  });
+  const source = (endpoint: PaletteEndpoint | null) =>
+    endpoint && palette
+      ? palette.colors[endpoint === "start" ? 0 : palette.colors.length - 1]
+      : { color, values };
+  const change = (next: Coordinates, endpoint: PaletteEndpoint | null) => {
+    const nextColor = fromCoordinates(next, mode, source(endpoint).color.a);
+    if (endpoint && palette) palette.onChange(endpoint, nextColor);
+    else onChange(nextColor);
+  };
+  const move = (
+    event: React.PointerEvent<HTMLDivElement>,
+    endpoint: PaletteEndpoint | null,
+  ) => {
     const bounds = event.currentTarget.getBoundingClientRect();
-    const next: Coordinates = [...values];
+    const next: Coordinates = [...source(endpoint).values];
     next[mapping.x] =
       Math.max(0, Math.min(1, (event.clientX - bounds.left) / bounds.width)) *
       config[mapping.x].max;
@@ -45,8 +81,15 @@ export function ColorPlane({
           Math.min(1, (event.clientY - bounds.top) / bounds.height),
         )) *
       config[mapping.y].max;
-    onChange(fromCoordinates(next, mode, color.a));
+    change(next, endpoint);
   };
+  const paths = palette
+    ? palettePaths(
+        palette.path.map((point) => position(point.values)),
+        mode === "RGB" ? null : mapping.x === 0 ? "x" : null,
+      )
+    : [];
+  const crosshair = position(values);
 
   return (
     <div className="color-plane">
@@ -61,11 +104,24 @@ export function ColorPlane({
         aria-describedby={captionId}
         tabIndex={0}
         onPointerDown={(event) => {
+          if (document.activeElement instanceof HTMLInputElement)
+            document.activeElement.blur();
+          const hit = endpointFromTarget(event.target);
+          const endpoint = palette ? (hit ?? palette.endpoint) : null;
+          dragging.current = endpoint;
           event.currentTarget.setPointerCapture(event.pointerId);
-          move(event);
+          if (endpoint && palette) palette.onSelect(endpoint);
+          if (!hit) move(event, endpoint);
         }}
         onPointerMove={(event) => {
-          if (event.buttons) move(event);
+          if (event.buttons)
+            move(event, dragging.current ?? palette?.endpoint ?? null);
+        }}
+        onPointerUp={() => {
+          dragging.current = null;
+        }}
+        onPointerCancel={() => {
+          dragging.current = null;
         }}
         onKeyDown={(event) => {
           const axis =
@@ -76,18 +132,22 @@ export function ColorPlane({
                 : null;
           if (axis === null) return;
           event.preventDefault();
-          const next: Coordinates = [...values];
+          const endpoint = palette
+            ? (endpointFromTarget(event.target) ?? palette.endpoint)
+            : null;
+          const base = source(endpoint).values;
+          const next: Coordinates = [...base];
           const direction =
             event.key === "ArrowLeft" || event.key === "ArrowDown" ? -1 : 1;
           next[axis] = Math.max(
             0,
             Math.min(
-              Math.max(config[axis].max, values[axis]),
-              values[axis] +
+              Math.max(config[axis].max, base[axis]),
+              base[axis] +
                 direction * config[axis].step * (event.shiftKey ? 10 : 1),
             ),
           );
-          onChange(fromCoordinates(next, mode, color.a));
+          change(next, endpoint);
         }}
       >
         <canvas
@@ -96,14 +156,88 @@ export function ColorPlane({
           height={160}
           aria-label={`Browser rendered ${name} plane`}
         />
-        <span
-          className="crosshair"
-          style={{
-            left: `${Math.max(0, Math.min(100, (values[mapping.x] / config[mapping.x].max) * 100))}%`,
-            top: `${Math.max(0, Math.min(100, (1 - values[mapping.y] / config[mapping.y].max) * 100))}%`,
-            background: cssColor({ ...color, a: 1 }),
-          }}
-        />
+        {palette ? (
+          <>
+            <svg
+              className="palette-path"
+              viewBox="0 0 100 100"
+              preserveAspectRatio="none"
+              aria-hidden="true"
+              focusable="false"
+            >
+              {paths.map((path, index) => (
+                <g key={index}>
+                  <polyline
+                    points={path
+                      .map((point) => `${point.x},${point.y}`)
+                      .join(" ")}
+                    fill="none"
+                    stroke="#0009"
+                    strokeWidth={3}
+                    vectorEffect="non-scaling-stroke"
+                  />
+                  <polyline
+                    points={path
+                      .map((point) => `${point.x},${point.y}`)
+                      .join(" ")}
+                    fill="none"
+                    stroke="white"
+                    strokeWidth={1.5}
+                    vectorEffect="non-scaling-stroke"
+                  />
+                </g>
+              ))}
+            </svg>
+            {palette.colors.slice(1, -1).map((point, index) => {
+              const at = position(point.values);
+              return (
+                <span
+                  key={index}
+                  className="palette-step"
+                  aria-hidden="true"
+                  style={{
+                    left: `${at.x}%`,
+                    top: `${at.y}%`,
+                    background: cssColor({ ...point.color, a: 1 }),
+                  }}
+                />
+              );
+            })}
+            {(["start", "end"] as const).map((endpoint) => {
+              const point = source(endpoint);
+              const at = position(point.values);
+              return (
+                <button
+                  key={endpoint}
+                  type="button"
+                  className="palette-endpoint"
+                  data-palette-endpoint={endpoint}
+                  aria-label={`${endpoint === "start" ? "Start" : "End"} color in ${name} plane`}
+                  aria-pressed={palette.endpoint === endpoint}
+                  style={{ left: `${at.x}%`, top: `${at.y}%` }}
+                  onClick={() => palette.onSelect(endpoint)}
+                >
+                  <span
+                    className="endpoint-circle"
+                    style={{ background: cssColor({ ...point.color, a: 1 }) }}
+                    aria-hidden="true"
+                  >
+                    {endpoint === "start" ? "S" : "E"}
+                  </span>
+                </button>
+              );
+            })}
+          </>
+        ) : (
+          <span
+            className="crosshair"
+            style={{
+              left: `${crosshair.x}%`,
+              top: `${crosshair.y}%`,
+              background: cssColor({ ...color, a: 1 }),
+            }}
+          />
+        )}
         <div className="plane-labels">
           <span>{config[mapping.y].name} ↑</span>
           <span>{config[mapping.x].name} →</span>

@@ -30,13 +30,17 @@ export function parseColor(text: string): Color | null {
     ? { ...result, h: ((result.h % 360) + 360) % 360 }
     : null;
 }
+let sampleContext: CanvasRenderingContext2D | null = null;
 export function sampleColor(color: string) {
-  const canvas = document.createElement("canvas");
-  canvas.width = canvas.height = 1;
-  const ctx = canvas.getContext("2d", {
-    colorSpace: "srgb",
-    willReadFrequently: true,
-  });
+  if (!sampleContext) {
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = 1;
+    sampleContext = canvas.getContext("2d", {
+      colorSpace: "srgb",
+      willReadFrequently: true,
+    });
+  }
+  const ctx = sampleContext;
   if (!ctx) throw new Error("Canvas 2D is unavailable");
   ctx.fillStyle = "#000";
   ctx.fillStyle = color;
@@ -44,6 +48,7 @@ export function sampleColor(color: string) {
   ctx.fillStyle = "#fff";
   ctx.fillStyle = color;
   if (ctx.fillStyle !== parsed) throw new Error("Invalid CSS color");
+  ctx.clearRect(0, 0, 1, 1);
   ctx.fillRect(0, 0, 1, 1);
   const [r, g, b, a] = ctx.getImageData(0, 0, 1, 1).data;
   return {

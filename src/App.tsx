@@ -13,6 +13,8 @@ import {
 import { zipSync, strToU8 } from "fflate";
 import { Button } from "./components/ui/button";
 import { Picker } from "./Picker";
+import { PaletteControls } from "./PaletteControls";
+import { createPaletteRamp, paletteCss } from "./palette";
 import { ColorEditors } from "./ColorEditors";
 import { ColorSwatches } from "./ColorSwatches";
 import { useAppUpdate } from "./useAppUpdate";
@@ -28,9 +30,10 @@ import {
   useWorkspace,
   pickerModes,
   createSnapshot,
+  pickedColor,
   type Workspace,
 } from "./workspace";
-import type { Snapshot } from "./workspaceSchema";
+import type { Snapshot, PaletteEndpoint } from "./workspaceSchema";
 import { saveShare } from "./sharing";
 import { useCompiler } from "./useCompiler";
 
@@ -83,8 +86,34 @@ function initialWorkspace(): Workspace {
   };
 }
 export function App({ shared }: { shared?: Snapshot }) {
-  const { state, set } = useWorkspace(initialWorkspace, shared);
-  const { saved, active, source, color, selected, tab, width, pickers } = state;
+  const { state, set, setColor, updateState } = useWorkspace(
+    initialWorkspace,
+    shared,
+  );
+  const {
+    saved,
+    active,
+    source,
+    color: start,
+    palette,
+    selected,
+    tab,
+    width,
+    pickers,
+  } = state;
+  const color = pickedColor(state);
+  const ramp = useMemo(
+    () =>
+      palette
+        ? createPaletteRamp(
+            start,
+            palette.end,
+            palette.mode,
+            palette.subdivisions,
+          )
+        : undefined,
+    [start, palette?.end, palette?.mode, palette?.subdivisions],
+  );
   const [message, setMessage] = useState("");
   const updateAvailable = useAppUpdate();
   const [sharing, setSharing] = useState(false);
@@ -135,7 +164,7 @@ export function App({ shared }: { shared?: Snapshot }) {
   }, [color]);
   const dirty = source !== saved.find((p) => p.id === active)?.source;
   const update = (next: Color) => {
-    set("color", next);
+    setColor(next);
     if (selected !== null && entries[selected]) {
       const entry = entries[selected];
       set(
@@ -145,6 +174,39 @@ export function App({ shared }: { shared?: Snapshot }) {
           source.slice(entry.index + entry.value.length),
       );
     }
+  };
+  const selectEndpoint = (endpoint: PaletteEndpoint) => {
+    if (palette && palette.endpoint !== endpoint) {
+      updateState("palette", (current) =>
+        current ? { ...current, endpoint } : current,
+      );
+      set("selected", null);
+    }
+  };
+  const updateEndpoint = (endpoint: PaletteEndpoint, next: Color) => {
+    if (palette && palette.endpoint !== endpoint) {
+      updateState("palette", (current) =>
+        current ? { ...current, endpoint } : current,
+      );
+      set("selected", null);
+      setColor(next);
+    } else update(next);
+  };
+  const createPalette = () => {
+    set("palette", {
+      end: {
+        ...color,
+        l:
+          color.l >= 0.5
+            ? Math.max(0.2, color.l - 0.35)
+            : Math.min(0.85, color.l + 0.35),
+        h: (color.h + 90) % 360,
+      },
+      endpoint: "start",
+      subdivisions: 4,
+      mode: "OKHCL",
+    });
+    set("selected", null);
   };
   const persist = (next: Saved[]) => {
     try {
@@ -282,6 +344,11 @@ export function App({ shared }: { shared?: Snapshot }) {
               )}
               Share
             </Button>
+            {!palette && (
+              <Button variant="outline" onClick={createPalette}>
+                Create palette
+              </Button>
+            )}
             {updateAvailable && (
               <>
                 <span role="status">Update available</span>
@@ -305,6 +372,25 @@ export function App({ shared }: { shared?: Snapshot }) {
               </span>
             )}
           </div>
+          {palette && ramp && (
+            <PaletteControls
+              start={start}
+              palette={palette}
+              colors={ramp.colors}
+              onChange={(patch) =>
+                updateState("palette", (current) =>
+                  current ? { ...current, ...patch } : current,
+                )
+              }
+              onSelect={selectEndpoint}
+              onClose={() => {
+                set("color", color);
+                set("palette", undefined);
+                set("selected", null);
+              }}
+              onCopy={() => copy(paletteCss(ramp.colors))}
+            />
+          )}
           {pickers.map((panel, panelIndex) => (
             <section
               className="panel color-panel"
@@ -346,7 +432,11 @@ export function App({ shared }: { shared?: Snapshot }) {
                 </Button>
               </div>
               <div className="panel-heading">
-                <h2>Color</h2>
+                <h2>
+                  {palette
+                    ? `${palette.endpoint === "start" ? "Start" : "End"} color`
+                    : "Color"}
+                </h2>
                 <button
                   onClick={() => {
                     set("selected", null);
@@ -359,7 +449,21 @@ export function App({ shared }: { shared?: Snapshot }) {
                     : "Free pick"}
                 </button>
               </div>
-              <Picker color={color} mode={panel.mode} onChange={update} />
+              <Picker
+                color={color}
+                mode={panel.mode}
+                onChange={update}
+                palette={
+                  palette && ramp
+                    ? {
+                        ...ramp,
+                        endpoint: palette.endpoint,
+                        onSelect: selectEndpoint,
+                        onChange: updateEndpoint,
+                      }
+                    : undefined
+                }
+              />
               <ColorSwatches display={cssColor(color)} srgb={sample?.rgb} />
               <ColorEditors
                 key={panel.mode}
@@ -480,7 +584,7 @@ export function App({ shared }: { shared?: Snapshot }) {
                           return;
                         }
                         set("selected", i);
-                        set("color", next);
+                        setColor(next);
                       }}
                     >
                       <span className="token-swatch checker">

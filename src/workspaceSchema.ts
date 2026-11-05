@@ -7,6 +7,14 @@ export const colorSchema = z.object({
 });
 export const pickerModes = ["RGB", "HSL", "HCL", "OKHCL"] as const;
 export type PickerMode = (typeof pickerModes)[number];
+export const paletteSchema = z.object({
+  end: colorSchema,
+  endpoint: z.enum(["start", "end"]),
+  subdivisions: z.number().int().min(1).max(64),
+  mode: z.enum(pickerModes),
+});
+export type Palette = z.infer<typeof paletteSchema>;
+export type PaletteEndpoint = Palette["endpoint"];
 export const workspaceSchema = z.object({
   version: z.literal(1),
   saved: z.array(
@@ -15,6 +23,7 @@ export const workspaceSchema = z.object({
   active: z.string(),
   source: z.string(),
   color: colorSchema,
+  palette: paletteSchema.optional(),
   selected: z.number().int().nonnegative().nullable(),
   tab: z.enum(["preview", "source", "compiled"]),
   width: z.enum(["100%", "375px", "768px"]),

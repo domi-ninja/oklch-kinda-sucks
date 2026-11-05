@@ -18,6 +18,16 @@ import { round, type Color } from "./color";
 
 export const workspaceStorageKey = "oklch-workspace";
 
+export function pickedColor(state: Pick<Workspace, "color" | "palette">) {
+  return state.palette?.endpoint === "end" ? state.palette.end : state.color;
+}
+
+function withPickedColor(state: Workspace, color: Color): Workspace {
+  return state.palette?.endpoint === "end"
+    ? { ...state, palette: { ...state.palette, end: color } }
+    : { ...state, color };
+}
+
 export function colorHash(color: Color) {
   return `#color=${[color.l, color.c, color.h, color.a].map((value) => round(value, 6)).join(",")}`;
 }
@@ -31,8 +41,10 @@ export function colorFromHash(hash: string): Color | null {
   return parsed.success ? parsed.data : null;
 }
 
-export function workspaceHash(state: Pick<Workspace, "color" | "pickers">) {
-  return `${colorHash(state.color)}&pickers=${state.pickers.map((picker) => picker.mode).join(",")}`;
+export function workspaceHash(
+  state: Pick<Workspace, "color" | "pickers" | "palette">,
+) {
+  return `${colorHash(pickedColor(state))}&pickers=${state.pickers.map((picker) => picker.mode).join(",")}`;
 }
 
 function pickersFromHash(hash: string, existing: Workspace["pickers"]) {
@@ -139,10 +151,9 @@ function readWorkspace(initial: () => Workspace) {
   const color = colorFromHash(location.hash);
   const pickers = pickersFromHash(location.hash, state.pickers);
   return {
-    ...state,
-    ...(color && colorHash(state.color) !== colorHash(color)
-      ? { color, selected: null }
-      : {}),
+    ...(color && colorHash(pickedColor(state)) !== colorHash(color)
+      ? { ...withPickedColor(state, color), selected: null }
+      : state),
     pickers: pickers ?? state.pickers,
   };
 }
@@ -158,7 +169,7 @@ export function useWorkspace(initial: () => Workspace, shared?: Snapshot) {
       if (location.hash !== hash || location.pathname.startsWith("/share/"))
         history.replaceState(null, "", `/${location.search}${hash}`);
     },
-    [state.color, state.pickers],
+    [state.color, state.pickers, state.palette],
   );
   useEffect(
     function persistWorkspaceLocally() {
@@ -180,8 +191,9 @@ export function useWorkspace(initial: () => Workspace, shared?: Snapshot) {
       }
       const color = colorFromHash(location.hash);
       setState((previous) => ({
-        ...previous,
-        ...(color ? { color, selected: null } : {}),
+        ...(color
+          ? { ...withPickedColor(previous, color), selected: null }
+          : previous),
         pickers:
           pickersFromHash(location.hash, previous.pickers) ?? previous.pickers,
       }));
@@ -196,5 +208,13 @@ export function useWorkspace(initial: () => Workspace, shared?: Snapshot) {
   function set<K extends keyof Workspace>(key: K, value: Workspace[K]) {
     setState((previous) => ({ ...previous, [key]: value }));
   }
-  return { state, set };
+  function updateState<K extends keyof Workspace>(
+    key: K,
+    change: (previous: Workspace[K]) => Workspace[K],
+  ) {
+    setState((previous) => ({ ...previous, [key]: change(previous[key]) }));
+  }
+  const setColor = (color: Color) =>
+    setState((previous) => withPickedColor(previous, color));
+  return { state, set, setColor, updateState };
 }
