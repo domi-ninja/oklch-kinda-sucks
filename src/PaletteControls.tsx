@@ -1,3 +1,4 @@
+import { useId } from "react";
 import { Copy } from "lucide-react";
 import { Button } from "./components/ui/button";
 import { NumericInput } from "./NumericInput";
@@ -29,6 +30,7 @@ export function PaletteControls({
   onClose: () => void;
   onCopy: () => void;
 }) {
+  const brightnessFilter = useId();
   return (
     <section className="panel palette-panel" aria-label="Palette">
       <div className="panel-heading">
@@ -102,24 +104,63 @@ export function PaletteControls({
             </select>
           </label>
         </div>
-        <ol
-          className="palette-strip"
-          aria-label="Palette colors"
-          style={{
-            gridTemplateColumns: `repeat(${colors.length}, minmax(0, 1fr))`,
-          }}
-        >
-          {colors.map((color, index) => (
-            <li
-              key={index}
-              className="checker"
-              aria-label={`Color ${index + 1}: ${cssColor(color)}`}
-              title={cssColor(color)}
+        <div className="palette-scales">
+          <svg
+            width="0"
+            height="0"
+            aria-hidden="true"
+            className="palette-filter"
+          >
+            <defs>
+              <filter
+                id={brightnessFilter}
+                x="0"
+                y="0"
+                width="100%"
+                height="100%"
+              >
+                {/* Linear-light sRGB weights preserve luminance after checkerboard compositing. */}
+                <feColorMatrix
+                  colorInterpolationFilters="linearRGB"
+                  type="matrix"
+                  values="0.2126 0.7152 0.0722 0 0
+                          0.2126 0.7152 0.0722 0 0
+                          0.2126 0.7152 0.0722 0 0
+                          0      0      0      1 0"
+                />
+              </filter>
+            </defs>
+          </svg>
+          {[false, true].map((brightness) => (
+            <ol
+              key={String(brightness)}
+              className={`palette-strip${brightness ? " palette-brightness" : ""}`}
+              aria-label={
+                brightness ? "Perceived brightness" : "Palette colors"
+              }
+              style={{
+                gridTemplateColumns: `repeat(${colors.length}, minmax(0, 1fr))`,
+                filter: brightness ? `url(#${brightnessFilter})` : undefined,
+              }}
             >
-              <span style={{ background: cssColor(color) }} />
-            </li>
+              {colors.map((color, index) => (
+                <li
+                  key={index}
+                  className="checker"
+                  aria-label={
+                    brightness
+                      ? `Brightness of color ${index + 1}`
+                      : `Color ${index + 1}: ${cssColor(color)}`
+                  }
+                  title={cssColor(color)}
+                >
+                  <span style={{ background: cssColor(color) }} />
+                </li>
+              ))}
+            </ol>
           ))}
-        </ol>
+          <span>Perceived brightness · sRGB</span>
+        </div>
         <div className="palette-actions">
           <span>{colors.length} colors</span>
           <Button variant="outline" onClick={onCopy}>

@@ -38,6 +38,8 @@ Add middle color enables a quadratic Bézier curve. Select Middle or drag its M 
 
 Intermediate markers show the generated steps and cannot be edited. Copy palette copies CSS variables for those colors. Palettes save in this browser; a color URL shares only the active endpoint.
 
+The grayscale strip below the palette matches each color's relative luminance on a standard sRGB display, including its transparency over the checkerboard. It uses linear-light luminance, not an RGB average or the picker's lightness channel. Actual perceived brightness varies with the display, viewing conditions, and observer.
+
 ### Harmonizer
 
 Open Harmonizer above the pickers for a hue-by-contrast grid. Use selects a row and sets the palette's Start and End to its first and last colors. Moving a row's Hue slider selects that row and updates both endpoints. An existing palette keeps its interpolation mode, subdivisions, and optional middle control; the middle control takes the new hue.

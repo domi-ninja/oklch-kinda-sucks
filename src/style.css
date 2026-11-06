@@ -215,6 +215,15 @@ h2 {
 .palette-endpoints button[aria-pressed="true"] {
   box-shadow: inset 0 0 0 2px #333;
 }
+.palette-scales {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.palette-filter {
+  position: absolute;
+  pointer-events: none;
+}
 .palette-strip {
   display: grid;
   overflow: hidden;
@@ -227,6 +236,9 @@ h2 {
 .palette-strip li > span {
   display: block;
   height: 44px;
+}
+.palette-brightness li > span {
+  height: 22px;
 }
 .palette-actions > span {
   flex: 1;
