@@ -48,6 +48,8 @@ Harmonized light and Harmonized dark each have a color strip and a brightness st
 
 Apply palette to preset fills both modes of the current preset draft: backgrounds, cards, primary, secondary, accent, muted, borders, inputs, rings, and sidebar colors. Primary uses the middle hue; secondary and accent use the quarter points. Error colors keep their existing fills. Custom CSS and non-color settings are preserved. Undo reverses the apply action in one step. Use the usual preset save controls to keep the updated stylesheet as a saved preset.
 
+Hover over the palette panel to try its mapped light and dark colors in the component previews. Moving the mouse outside restores the current preset. Hovering does not save changes or add an undo step, and preview scroll positions and form inputs stay in place.
+
 Copy light theme and Copy dark theme copy the generated token declarations for their respective modes.
 
 ### Harmonizer

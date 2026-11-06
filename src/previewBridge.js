@@ -6,6 +6,8 @@
   /** @type {{x: number, y: number} | null} */
   let pointer = null;
   let pending = 0;
+  /** @type {Set<string>} */
+  const previewColors = new Set();
   const probe = document.createElement("span");
   probe.style.cssText =
     "position:fixed;visibility:hidden;pointer-events:none;width:0;height:0;contain:strict";
@@ -222,6 +224,22 @@
     const style = document.getElementById("preview-theme");
     if (style && style.textContent !== event.data.css)
       style.textContent = event.data.css;
+    // Inline overrides keep hover previews independent of Tailwind compilation and CSS layer priority.
+    const root = document.documentElement.style;
+    for (const name of previewColors) root.removeProperty(name);
+    previewColors.clear();
+    if (event.data.colors && typeof event.data.colors === "object") {
+      for (const [name, value] of Object.entries(event.data.colors)) {
+        if (!/^--color-[\w-]+$/.test(name) || typeof value !== "string")
+          continue;
+        root.setProperty(
+          name,
+          value.replace(/\s*!important\s*$/i, ""),
+          "important",
+        );
+        previewColors.add(name);
+      }
+    }
     schedule();
   });
 })();

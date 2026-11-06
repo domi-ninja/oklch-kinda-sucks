@@ -9,6 +9,30 @@ import {
 } from "./paletteHarmonizer";
 
 const toOklch = converter("oklch");
+
+export function palettePreviewColors(
+  source: string,
+  palettes: HarmonizedPalettes,
+) {
+  const { declarations } = readThemeColors(applyPaletteTheme(source, palettes));
+  const light = Object.fromEntries(
+    declarations
+      .filter((entry) => entry.mode === "light")
+      .map(({ name, value }) => [name, value]),
+  );
+  return {
+    light,
+    dark: {
+      ...light,
+      ...Object.fromEntries(
+        declarations
+          .filter((entry) => entry.mode === "dark")
+          .map(({ name, value }) => [name, value]),
+      ),
+    },
+  };
+}
+
 export function themePaletteCss(palette: ThemePalette, mode: ThemeMode) {
   const declarations = Object.entries(palette.tokens)
     .map(([name, color]) => `  --color-${name}: ${cssColor(color)};`)

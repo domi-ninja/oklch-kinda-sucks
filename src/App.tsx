@@ -17,7 +17,12 @@ import { Picker } from "./Picker";
 import { PaletteControls } from "./PaletteControls";
 import { ModeGenerator } from "./ModeGenerator";
 import { defaultModeGeneration } from "./modeGeneration";
-import { applyPaletteTheme, themePaletteCss } from "./applyPaletteTheme";
+import {
+  applyPaletteTheme,
+  palettePreviewColors,
+  themePaletteCss,
+} from "./applyPaletteTheme";
+import type { HarmonizedPalettes } from "./paletteHarmonizer";
 import { createPaletteRamp, paletteCss } from "./palette";
 import { ColorEditors } from "./ColorEditors";
 import { ColorSwatches } from "./ColorSwatches";
@@ -166,6 +171,16 @@ export function App({ shared }: { shared?: PresetShare }) {
     null,
   );
   const compiled = useCompiler(source);
+  const [previewPalette, setPreviewPalette] =
+    useState<HarmonizedPalettes | null>(null);
+  const previewColors = useMemo(() => {
+    if (!palette || !previewPalette) return null;
+    try {
+      return palettePreviewColors(source, previewPalette);
+    } catch {
+      return null;
+    }
+  }, [source, palette, previewPalette]);
   const entries = useMemo(() => themeEntries(source), [source]);
   const pairedEntries = useMemo(() => {
     const groups = new Map<
@@ -442,6 +457,7 @@ export function App({ shared }: { shared?: PresetShare }) {
               palette={palette}
               colors={ramp.colors}
               path={ramp.path}
+              onPreviewChange={setPreviewPalette}
               onChange={(patch) =>
                 updateState("palette", (current) =>
                   current ? { ...current, ...patch } : current,
@@ -791,6 +807,7 @@ export function App({ shared }: { shared?: PresetShare }) {
                     </div>
                     <PreviewFrame
                       css={compiled.css}
+                      colors={previewColors?.[mode.dark ? "dark" : "light"]}
                       dark={mode.dark}
                       width={width}
                     />

@@ -5,30 +5,32 @@ import type { Workspace } from "./workspaceSchema";
 
 export function PreviewFrame({
   css,
+  colors,
   dark,
   width,
 }: {
   css: string;
+  colors?: Record<string, string>;
   dark: boolean;
   width: Workspace["width"];
 }) {
   const frame = useRef<HTMLIFrameElement>(null);
-  const latestCss = useRef(css);
+  const latestTheme = useRef({ css, colors });
   const document = useMemo(
     () => demoDocument("", false, dark, { script: previewBridge }),
     [dark],
   );
   const sendStyles = () =>
     frame.current?.contentWindow?.postMessage(
-      { type: "preview-theme", css: latestCss.current },
+      { type: "preview-theme", ...latestTheme.current },
       "*",
     );
   useLayoutEffect(
     function updatePreviewStyles() {
-      latestCss.current = css;
+      latestTheme.current = { css, colors };
       sendStyles();
     },
-    [css],
+    [css, colors],
   );
   return (
     <iframe

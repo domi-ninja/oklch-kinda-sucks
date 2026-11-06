@@ -1,4 +1,4 @@
-import { useId, useState, type CSSProperties } from "react";
+import { useId, useLayoutEffect, useState, type CSSProperties } from "react";
 import { Copy } from "lucide-react";
 import { Button } from "./components/ui/button";
 import { NumericInput } from "./NumericInput";
@@ -30,6 +30,7 @@ export function PaletteControls({
   onCopy,
   onCopyHarmonized,
   onApply,
+  onPreviewChange,
 }: {
   start: Color;
   palette: Palette;
@@ -42,12 +43,31 @@ export function PaletteControls({
   onCopy: () => void;
   onCopyHarmonized: (palette: ThemePalette, mode: ThemeMode) => void;
   onApply: (palettes: HarmonizedPalettes) => void;
+  onPreviewChange: (palettes: HarmonizedPalettes | null) => void;
 }) {
   const brightnessFilter = useId();
   const harmony = useHarmonizedPalette(colors, path);
   const [applyError, setApplyError] = useState("");
+  const [hovered, setHovered] = useState(false);
+  useLayoutEffect(
+    function syncHoveredPalettePreview() {
+      onPreviewChange(
+        hovered && !harmony.error ? (harmony.palette ?? null) : null,
+      );
+      return () => onPreviewChange(null);
+    },
+    [hovered, harmony.palette, harmony.error, onPreviewChange],
+  );
   return (
-    <section className="panel palette-panel" aria-label="Palette">
+    <section
+      className="panel palette-panel"
+      aria-label="Palette"
+      onPointerEnter={(event) => {
+        if (event.pointerType === "mouse") setHovered(true);
+      }}
+      onPointerLeave={() => setHovered(false)}
+      onPointerCancel={() => setHovered(false)}
+    >
       <div className="panel-heading">
         <h2>Palette</h2>
         <Button variant="outline" onClick={onClose}>

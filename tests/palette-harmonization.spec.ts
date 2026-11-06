@@ -191,6 +191,14 @@ test("both theme previews copy independently and apply to the current preset in 
     );
   const before = await workspace();
   const frame = page.frameLocator('iframe[title="shadcn/ui light preview"]');
+  await page.mouse.move(0, 0);
+  await expect
+    .poll(() =>
+      frame
+        .locator("html")
+        .evaluate((el) => el.style.getPropertyValue("--color-primary")),
+    )
+    .toBe("");
   const oldColor = await frame
     .getByRole("button", { name: "Open project", exact: true })
     .evaluate((el) => getComputedStyle(el).backgroundColor);
