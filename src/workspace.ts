@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect } from "react";
 import { useWorkspaceHistory } from "./useWorkspaceHistory";
-import { sameColor } from "./workspaceHistory";
+import { sameColor, type WorkspaceChange } from "./workspaceHistory";
 import { normalizePresets } from "./presets";
 export {
   pickerModes,
@@ -186,5 +186,14 @@ export function useWorkspace(initial: () => Workspace, shared?: PresetShare) {
   }
   const setColor = (color: Color, record = true) =>
     setState((previous) => withPickedColor(previous, color), record);
-  return { state, set, setColor, updateState, ...historyControls };
+  const editWorkspace = (change: WorkspaceChange, group: object) =>
+    setState(change, true, group);
+  return {
+    state,
+    set,
+    setColor,
+    updateState,
+    editWorkspace,
+    ...historyControls,
+  };
 }

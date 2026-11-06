@@ -32,6 +32,44 @@ export const modeGenerationSchema = z.object({
   chroma: z.number().min(0).max(1.5),
 });
 export type ModeGeneration = z.infer<typeof modeGenerationSchema>;
+export const harmonizerSchema = z
+  .object({
+    rows: z
+      .array(
+        z.object({
+          id: z.string(),
+          name: z.string().max(80),
+          hue: z.number().min(0).max(360),
+        }),
+      )
+      .min(1)
+      .max(12),
+    levels: z
+      .array(
+        z.object({
+          id: z.string(),
+          name: z.string().max(40),
+          contrast: z.number().min(0).max(106),
+          chroma: z.number().min(0).max(0.4).optional(),
+        }),
+      )
+      .min(2)
+      .max(16),
+    gamut: z.enum(["srgb", "p3"]),
+    chromaMode: z.enum(["even", "max"]),
+    darkBackground: z.string().regex(/^#[\da-f]{6}$/i),
+    lightBackground: z.string().regex(/^#[\da-f]{6}$/i),
+    darkColumns: z.number().int().min(1),
+    selectedRow: z.string().nullable(),
+  })
+  .refine(
+    (settings) =>
+      settings.darkColumns < settings.levels.length &&
+      (settings.selectedRow === null ||
+        settings.rows.some((row) => row.id === settings.selectedRow)),
+    "Select an existing hue row and keep both background groups.",
+  );
+export type HarmonizerSettings = z.infer<typeof harmonizerSchema>;
 export const workspaceSchema = z.object({
   version: z.literal(1),
   saved: z.array(
@@ -42,6 +80,7 @@ export const workspaceSchema = z.object({
   color: colorSchema,
   palette: paletteSchema.optional(),
   modeGeneration: modeGenerationSchema.optional(),
+  harmonizer: harmonizerSchema.optional(),
   selected: z.number().int().nonnegative().nullable(),
   tab: z.enum(["preview", "source", "compiled"]),
   width: z.enum(["100%", "375px", "768px"]),

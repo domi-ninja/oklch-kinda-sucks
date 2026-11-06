@@ -36,6 +36,18 @@ function sameItems<T extends object>(a: T[], b: T[]) {
 }
 
 function isEdit(a: Workspace, b: Workspace) {
+  const harmonizerChanged =
+    a.harmonizer !== b.harmonizer &&
+    (!a.harmonizer ||
+      !b.harmonizer ||
+      a.harmonizer.gamut !== b.harmonizer.gamut ||
+      a.harmonizer.chromaMode !== b.harmonizer.chromaMode ||
+      a.harmonizer.darkBackground !== b.harmonizer.darkBackground ||
+      a.harmonizer.lightBackground !== b.harmonizer.lightBackground ||
+      a.harmonizer.darkColumns !== b.harmonizer.darkColumns ||
+      a.harmonizer.selectedRow !== b.harmonizer.selectedRow ||
+      !sameItems(a.harmonizer.rows, b.harmonizer.rows) ||
+      !sameItems(a.harmonizer.levels, b.harmonizer.levels));
   const paletteChanged =
     a.palette !== b.palette &&
     (!a.palette ||
@@ -46,6 +58,7 @@ function isEdit(a: Workspace, b: Workspace) {
       a.palette.subdivisions !== b.palette.subdivisions);
   return (
     a.source !== b.source ||
+    harmonizerChanged ||
     a.active !== b.active ||
     !sameColor(a.color, b.color) ||
     paletteChanged ||

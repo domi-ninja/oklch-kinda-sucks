@@ -17,7 +17,7 @@ Preset links do not include the current picker color, picker layout, selected to
 
 ## Browser storage
 
-The browser saves the workspace under `oklch-workspace` and saved presets under `oklch-presets`. This includes drafts, selected preset and token, picker configuration, palette settings, generator controls, preview width, and tab. Ordinary editing, saving, discarding, and color URL navigation do not write to the backend.
+The browser saves the workspace under `oklch-workspace` and saved presets under `oklch-presets`. This includes drafts, selected preset and token, picker configuration, palette settings, theme generator controls, Harmonizer rows and settings, preview width, and tab. Harmonizer settings are excluded from color URLs and preset links. Ordinary editing, saving, discarding, and color URL navigation do not write to the backend.
 
 Undo and redo history stays in memory until reload. It is excluded from browser storage, color URLs, and preset links. Restoring a saved preset through undo or redo updates the ordinary browser storage.
 

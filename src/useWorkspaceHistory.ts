@@ -23,18 +23,25 @@ export function useWorkspaceHistory(initial: () => Workspace) {
   const textEdit = useRef<object | null>(null);
   const batch = useRef<object | null>(null);
 
-  function change(change: WorkspaceChange, record = true) {
+  function historyGroup() {
     if (!batch.current) {
       batch.current = {};
       queueMicrotask(() => {
         batch.current = null;
       });
     }
+    return interaction.current ?? textEdit.current ?? batch.current;
+  }
+  function change(
+    change: WorkspaceChange,
+    record = true,
+    group = historyGroup(),
+  ) {
     dispatch({
       type: "change",
       change,
       record,
-      group: interaction.current ?? textEdit.current ?? batch.current,
+      group,
     });
   }
   const undo = () => dispatch({ type: "undo" });
@@ -152,6 +159,7 @@ export function useWorkspaceHistory(initial: () => Workspace) {
   return {
     state: history.present,
     change,
+    historyGroup,
     undo,
     redo,
     canUndo: history.past.length > 0,

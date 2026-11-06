@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { lazy, Suspense, useMemo, useRef, useState } from "react";
 import {
   ArrowDownToLine,
   Plus,
@@ -23,6 +23,7 @@ import { ColorSwatches } from "./ColorSwatches";
 import { useAppUpdate } from "./useAppUpdate";
 import { PreviewFrame } from "./PreviewFrame";
 import { PreviewConnections } from "./PreviewConnections";
+import { defaultHarmonizerSettings } from "./harmonizerSettings";
 import {
   cssColor,
   parseColor,
@@ -48,6 +49,7 @@ import {
   normalizePresets,
   type Saved,
 } from "./presets";
+const Harmonizer = lazy(() => import("./Harmonizer"));
 function loadPresets(): Saved[] {
   try {
     const saved: unknown = JSON.parse(
@@ -108,8 +110,18 @@ type PresetShareResult = { active: string; name: string; source: string } & (
   | { status: "error"; message: string }
 );
 export function App({ shared }: { shared?: PresetShare }) {
-  const { state, set, setColor, updateState, undo, redo, canUndo, canRedo } =
-    useWorkspace(initialWorkspace, shared);
+  const {
+    state,
+    set,
+    setColor,
+    updateState,
+    editWorkspace,
+    historyGroup,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+  } = useWorkspace(initialWorkspace, shared);
   const {
     saved,
     active,
@@ -142,6 +154,10 @@ export function App({ shared }: { shared?: PresetShare }) {
     ],
   );
   const [message, setMessage] = useState("");
+  const [harmonizerView, setHarmonizerView] = useState<
+    "unopened" | "open" | "closed"
+  >("unopened");
+  const harmonizerTrigger = useRef<HTMLButtonElement>(null);
   const updateAvailable = useAppUpdate();
   const [sharing, setSharing] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -411,6 +427,13 @@ export function App({ shared }: { shared?: PresetShare }) {
                 Create palette
               </Button>
             )}
+            <Button
+              ref={harmonizerTrigger}
+              variant="outline"
+              onClick={() => setHarmonizerView("open")}
+            >
+              Harmonizer
+            </Button>
           </div>
           {palette && ramp && (
             <PaletteControls
@@ -816,6 +839,49 @@ export function App({ shared }: { shared?: PresetShare }) {
           </div>
         </section>
       </main>
+      {harmonizerView !== "unopened" && (
+        <Suspense fallback={<span role="status">Opening harmonizer…</span>}>
+          <Harmonizer
+            open={harmonizerView === "open"}
+            value={state.harmonizer ?? defaultHarmonizerSettings}
+            historyGroup={historyGroup}
+            onClose={() => setHarmonizerView("closed")}
+            onReturnFocus={() => harmonizerTrigger.current?.focus()}
+            onApply={(settings, seed, group) => {
+              editWorkspace(
+                (previous) => ({
+                  ...previous,
+                  harmonizer: settings,
+                  ...(seed
+                    ? {
+                        color: seed.start,
+                        selected: null,
+                        palette: previous.palette
+                          ? {
+                              ...previous.palette,
+                              end: seed.end,
+                              middle: previous.palette.middle
+                                ? {
+                                    ...previous.palette.middle,
+                                    h: seed.hue % 360,
+                                  }
+                                : undefined,
+                            }
+                          : {
+                              end: seed.end,
+                              endpoint: "start",
+                              mode: "OKHCL",
+                              subdivisions: settings.levels.length - 1,
+                            },
+                      }
+                    : {}),
+                }),
+                group,
+              );
+            }}
+          />
+        </Suspense>
+      )}
       <PreviewConnections />
     </>
   );

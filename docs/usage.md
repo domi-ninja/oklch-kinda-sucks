@@ -38,6 +38,14 @@ Add middle color enables a quadratic Bézier curve. Select Middle or drag its M 
 
 Intermediate markers show the generated steps and cannot be edited. Copy palette copies CSS variables for those colors. Palettes save in this browser; a color URL shares only the active endpoint.
 
+### Harmonizer
+
+Open Harmonizer above the pickers for a hue-by-contrast grid. Use selects a row and sets the palette's Start and End to its first and last colors. Moving a row's Hue slider selects that row and updates both endpoints. An existing palette keeps its interpolation mode, subdivisions, and optional middle control; the middle control takes the new hue.
+
+The initial grid has nine levels and five hues. APCA fields set contrast targets against the dark or light background. Even chroma uses a common chroma across each column; Max chroma finds the maximum for each swatch. Chroma limit caps a column, and its reset button restores automatic calculation. Choose sRGB or Display P3; P3 badges mark colors outside sRGB. Hover a swatch for its CSS value and measured APCA contrast.
+
+Hue rows, levels, backgrounds, and settings save in this browser and support undo. Using the grid changes the palette, not the preset stylesheet. The grid's intermediate colors follow its contrast targets; the palette's intermediate colors follow its interpolation mode. Harmonizer settings are excluded from both kinds of share link.
+
 ## Generate the other theme mode
 
 Choose Light → dark or Dark → light above the theme colors. Adjust Background lightness, Contrast, and Chroma, then click Generate. Undo restores the previous stylesheet.

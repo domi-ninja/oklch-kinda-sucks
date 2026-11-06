@@ -101,6 +101,9 @@ test("a color drag undoes color and theme together with every shortcut", async (
     steps: 6,
   });
   await page.mouse.up();
+  await expect
+    .poll(() => readWorkspace(page).then((state) => state.color))
+    .toMatchObject({ c: expect.closeTo(0.28, 2), l: expect.closeTo(0.3, 2) });
   const after = await readWorkspace(page);
   expect(after.source).not.toBe(before.source);
   expect(after.color).not.toEqual(before.color);
