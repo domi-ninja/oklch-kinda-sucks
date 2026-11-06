@@ -256,25 +256,13 @@ h2 {
 .palette-brightness li > span {
   height: 22px;
 }
-.palette-brightness-reference {
-  height: 24px;
+.palette-row-heading {
+  position: sticky;
+  left: 0;
+  width: fit-content;
 }
-.palette-reference-step {
-  position: relative;
-  min-width: 0;
-}
-.palette-reference-step > span {
-  position: absolute;
-  inset: 0;
-}
-.palette-reference-dark {
-  mask-image: conic-gradient(
-    #000 25%,
-    transparent 0 50%,
-    #000 0 75%,
-    transparent 0
-  );
-  mask-size: 12px 12px;
+.palette-strip[aria-busy="true"] {
+  opacity: 0.5;
 }
 .palette-actions > span {
   flex: 1;

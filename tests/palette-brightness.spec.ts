@@ -29,13 +29,17 @@ const linear = (channel: number) => {
 const luminance = ([r, g, b]: number[]) =>
   0.2126 * linear(r) + 0.7152 * linear(g) + 0.0722 * linear(b);
 
-async function checkScale(page: Page, count: number) {
+async function checkScale(page: Page, count: number, harmonized = false) {
+  const colorName = harmonized ? "Harmonized colors" : "Palette colors";
+  const brightnessName = harmonized
+    ? "Harmonized brightness"
+    : "Perceived brightness";
   const colors = page.getByRole("list", {
-    name: "Palette colors",
+    name: colorName,
     exact: true,
   });
   const brightness = page.getByRole("list", {
-    name: "Perceived brightness",
+    name: brightnessName,
     exact: true,
   });
   await expect(brightness.getByRole("listitem")).toHaveCount(count);
@@ -52,16 +56,19 @@ async function checkScale(page: Page, count: number) {
     }),
   );
   expect(lowerCells).toEqual(upperCells);
-  const referenceSteps = page.locator(".palette-reference-step");
-  await expect(referenceSteps).toHaveCount(count);
-  expect(
-    await referenceSteps.evaluateAll((cells) =>
-      cells.map((cell) => {
-        const rect = cell.getBoundingClientRect();
-        return { x: rect.x, width: rect.width };
-      }),
-    ),
-  ).toEqual(upperCells);
+  for (const name of ["Harmonized colors", "Harmonized brightness"]) {
+    const row = page.getByRole("list", { name, exact: true });
+    await expect(row).toHaveAttribute("aria-busy", "false");
+    await expect(row.getByRole("listitem")).toHaveCount(count);
+    expect(
+      await row.locator("li").evaluateAll((cells) =>
+        cells.map((cell) => {
+          const rect = cell.getBoundingClientRect();
+          return { x: rect.x, width: rect.width };
+        }),
+      ),
+    ).toEqual(upperCells);
+  }
   const scroll = page.locator(".palette-scale-scroll");
   const checked = new Set<number>();
   const dimensions = await scroll.evaluate((element) => ({
@@ -73,25 +80,28 @@ async function checkScale(page: Page, count: number) {
       element.scrollLeft = left;
     }, left);
     const image = await pixels(page, scroll);
-    const positions = await scroll.evaluate((element) => {
-      const bounds = element.getBoundingClientRect();
-      return {
-        colors: [
-          ...element.querySelectorAll(".palette-strip:first-child li"),
-        ].map((cell) => {
-          const rect = cell.getBoundingClientRect();
-          return {
-            x: rect.x + rect.width / 2 - bounds.x,
-            y: rect.y - bounds.y,
-          };
-        }),
-        grayY:
-          element
-            .querySelector(".palette-brightness li")!
-            .getBoundingClientRect().y - bounds.y,
-        end: element.scrollLeft + element.clientWidth >= element.scrollWidth,
-      };
-    });
+    const positions = await scroll.evaluate(
+      (element, { colorName, brightnessName }) => {
+        const bounds = element.getBoundingClientRect();
+        return {
+          colors: [
+            ...element.querySelectorAll(`[aria-label="${colorName}"] li`),
+          ].map((cell) => {
+            const rect = cell.getBoundingClientRect();
+            return {
+              x: rect.x + rect.width / 2 - bounds.x,
+              y: rect.y - bounds.y,
+            };
+          }),
+          grayY:
+            element
+              .querySelector(`[aria-label="${brightnessName}"] li`)!
+              .getBoundingClientRect().y - bounds.y,
+          end: element.scrollLeft + element.clientWidth >= element.scrollWidth,
+        };
+      },
+      { colorName, brightnessName },
+    );
     const read = (x: number, y: number) =>
       image.data.slice(
         (Math.floor(y) * image.width + Math.floor(x)) * 4,
@@ -129,6 +139,7 @@ test("brightness tracks rendered palette colors, alpha and mobile columns", asyn
     .getByLabel("Palette interpolation", { exact: true })
     .selectOption("RGB");
   await checkScale(page, 5);
+  await checkScale(page, 5, true);
   const hex = page
     .getByRole("list", { name: "Palette colors", exact: true })
     .locator(".palette-hex");
@@ -142,73 +153,9 @@ test("brightness tracks rendered palette colors, alpha and mobile columns", asyn
   await page.getByRole("button", { name: "Apply color", exact: true }).click();
   await expect(hex.last()).toHaveText(/^#[\da-f]{6}80$/);
   await checkScale(page, 5);
+  await checkScale(page, 5, true);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByLabel("Palette subdivisions", { exact: true }).fill("8");
   await checkScale(page, 9);
-});
-
-test("linear brightness reference ignores the middle control and matches endpoint brightness", async ({
-  page,
-}) => {
-  await page.goto("/#color=0.6,0.1,180,1&pickers=RGB");
-  const apply = page.getByRole("button", { name: "Apply color", exact: true });
-  const editor = page.getByLabel("RGB value", { exact: true });
-  await editor.fill("#ff0000");
-  await apply.click();
-  await page
-    .getByRole("button", { name: "Create palette", exact: true })
-    .click();
-  await page.getByRole("button", { name: "End", exact: true }).click();
-  await editor.fill("#0000ff");
-  await apply.click();
-  await page.getByLabel("Palette subdivisions", { exact: true }).fill("2");
-  const reference = page.getByRole("img", {
-    name: "Linear Start to End brightness",
-    exact: true,
-  });
-  const actual = page.getByRole("list", {
-    name: "Perceived brightness",
-    exact: true,
-  });
-  await expect(reference).toBeVisible();
-  const original = await pixels(page, reference);
-  await page
-    .getByRole("button", { name: "Add middle color", exact: true })
-    .click();
-  await editor.fill("#ffffff");
-  await apply.click();
-  const bent = await pixels(page, actual);
-  const unchanged = await pixels(page, reference);
-  expect(
-    unchanged.data.every(
-      (value, index) => Math.abs(value - original.data[index]) <= 1,
-    ),
-  ).toBe(true);
-  const at = (image: typeof original, index: number, y = 4) => {
-    const x = Math.floor(1 + ((index + 0.5) * (image.width - 2)) / 3);
-    return image.data.slice(
-      (y * image.width + x) * 4,
-      (y * image.width + x) * 4 + 3,
-    );
-  };
-  const levels = [0, 1, 2].map((index) => luminance(at(unchanged, index)));
-  expect(Math.abs(levels[1] - (levels[0] + levels[2]) / 2)).toBeLessThan(0.01);
-  expect(luminance(at(bent, 1))).toBeGreaterThan(levels[1] + 0.15);
-  for (const index of [0, 2])
-    expect(Math.abs(luminance(at(bent, index)) - levels[index])).toBeLessThan(
-      0.01,
-    );
-  await page.getByRole("button", { name: "End", exact: true }).click();
-  await editor.fill("#00ff0080");
-  await apply.click();
-  const translucent = await pixels(page, actual);
-  const translucentReference = await pixels(page, reference);
-  for (const index of [0, 2])
-    for (const y of [4, 12])
-      expect(
-        Math.abs(
-          luminance(at(translucent, index, y)) -
-            luminance(at(translucentReference, index, y)),
-        ),
-      ).toBeLessThan(0.01);
+  await checkScale(page, 9, true);
 });

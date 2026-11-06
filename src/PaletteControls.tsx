@@ -1,15 +1,10 @@
-import { useId, useMemo, type CSSProperties } from "react";
+import { useId, type CSSProperties } from "react";
 import { Copy } from "lucide-react";
 import { Button } from "./components/ui/button";
 import { NumericInput } from "./NumericInput";
-import {
-  checkerColors,
-  cssColor,
-  sampleColor,
-  sampleChannels,
-  type Color,
-} from "./color";
-import { paletteTextColor, useDisplayColorSpace } from "./paletteContrast";
+import { checkerColors, cssColor, type Color } from "./color";
+import { PaletteRows } from "./PaletteRows";
+import { useHarmonizedPalette } from "./useHarmonizedPalette";
 import { paletteLabels } from "./palette";
 import {
   pickerModes,
@@ -27,6 +22,7 @@ export function PaletteControls({
   onToggleMiddle,
   onClose,
   onCopy,
+  onCopyHarmonized,
 }: {
   start: Color;
   palette: Palette;
@@ -36,49 +32,14 @@ export function PaletteControls({
   onToggleMiddle: () => void;
   onClose: () => void;
   onCopy: () => void;
+  onCopyHarmonized: (colors: Color[]) => void;
 }) {
   const brightnessFilter = useId();
-  const displayColorSpace = useDisplayColorSpace();
-  const labels = useMemo(
-    () =>
-      colors.map((color) => {
-        const css = cssColor(color);
-        const sample = sampleColor(css);
-        const backgrounds =
-          color.a < 1
-            ? Object.values(checkerColors).map((background) =>
-                sampleChannels(css, background, displayColorSpace),
-              )
-            : [
-                displayColorSpace === "srgb"
-                  ? sample
-                  : sampleChannels(css, undefined, displayColorSpace),
-              ];
-        return {
-          hex: sample.hex,
-          color: paletteTextColor(
-            backgrounds.map((background) => background.channels),
-            backgrounds[0].colorSpace,
-          ),
-        };
-      }),
-    [colors, displayColorSpace],
-  );
-  const brightnessReference = useMemo(() => {
-    // Composite endpoints before interpolating linear-light RGB so alpha also matches each checker shade.
-    const steps = (background: string) => {
-      const from = sampleColor(cssColor(start), background).rgb;
-      const to = sampleColor(cssColor(palette.end), background).rgb;
-      return colors.map(
-        (_, index) =>
-          `color-mix(in srgb-linear, ${from}, ${to} ${(index / (colors.length - 1)) * 100}%)`,
-      );
-    };
-    return {
-      light: steps(checkerColors.light),
-      dark: steps(checkerColors.dark),
-    };
-  }, [start, palette.end, colors.length]);
+  const harmony = useHarmonizedPalette(colors);
+  const harmonizedColors =
+    harmony.palette?.colors.length === colors.length
+      ? harmony.palette.colors
+      : colors;
   return (
     <section className="panel palette-panel" aria-label="Palette">
       <div className="panel-heading">
@@ -192,76 +153,47 @@ export function PaletteControls({
               className="palette-scale-content"
               style={{ minWidth: colors.length * 88 }}
             >
-              {[false, true].map((brightness) => (
-                <ol
-                  key={String(brightness)}
-                  className={`palette-strip${brightness ? " palette-brightness" : ""}`}
-                  aria-label={
-                    brightness ? "Perceived brightness" : "Palette colors"
-                  }
-                  style={{
-                    gridTemplateColumns: `repeat(${colors.length}, minmax(0, 1fr))`,
-                    filter: brightness
-                      ? `url(#${brightnessFilter})`
-                      : undefined,
-                  }}
-                >
-                  {colors.map((color, index) => (
-                    <li
-                      key={index}
-                      className="checker"
-                      aria-label={
-                        brightness
-                          ? `Brightness of color ${index + 1}`
-                          : `Color ${index + 1}: ${cssColor(color)}`
-                      }
-                      title={cssColor(color)}
-                    >
-                      <span style={{ background: cssColor(color) }} />
-                      {!brightness && (
-                        <code
-                          className="palette-hex"
-                          style={{ color: labels[index].color }}
-                          title={`sRGB ${labels[index].hex}`}
-                        >
-                          {labels[index].hex}
-                        </code>
-                      )}
-                    </li>
-                  ))}
-                </ol>
-              ))}
-              <div
-                className="palette-strip palette-brightness-reference"
-                role="img"
-                aria-label="Linear Start to End brightness"
-                title="Linear Start to End brightness"
-                style={{
-                  filter: `url(#${brightnessFilter})`,
-                  gridTemplateColumns: `repeat(${colors.length}, minmax(0, 1fr))`,
-                }}
-              >
-                {brightnessReference.light.map((light, index) => (
-                  <span className="palette-reference-step" key={index}>
-                    <span style={{ backgroundColor: light }} />
-                    <span
-                      className="palette-reference-dark"
-                      style={{
-                        backgroundColor: brightnessReference.dark[index],
-                      }}
-                    />
-                  </span>
-                ))}
-              </div>
+              <span className="palette-row-heading">Original</span>
+              <PaletteRows
+                colors={colors}
+                brightnessFilter={brightnessFilter}
+              />
+              <span className="palette-row-heading">
+                {harmony.pending
+                  ? "Harmonizing…"
+                  : harmony.error
+                    ? "Harmonization failed"
+                    : `Harmonized · ${harmony.palette?.background === "white" ? "light" : "dark"} background`}
+              </span>
+              <PaletteRows
+                colors={harmonizedColors}
+                harmonized
+                brightnessFilter={brightnessFilter}
+                pending={harmony.pending}
+              />
             </div>
           </div>
-          <span>Brightness / Linear reference · sRGB</span>
+          {harmony.error && (
+            <span role="alert" className="error">
+              {harmony.error}
+            </span>
+          )}
         </div>
         <div className="palette-actions">
           <span>{colors.length} colors</span>
           <Button variant="outline" onClick={onCopy}>
             <Copy size={15} />
             Copy palette
+          </Button>
+          <Button
+            variant="outline"
+            disabled={harmony.pending || !!harmony.error || !harmony.palette}
+            onClick={() => {
+              if (harmony.palette) onCopyHarmonized(harmony.palette.colors);
+            }}
+          >
+            <Copy size={15} />
+            Copy harmonized
           </Button>
         </div>
       </div>

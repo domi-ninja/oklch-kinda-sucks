@@ -44,7 +44,7 @@ Hex labels sit directly on each swatch. APCA contrast chooses black or white tex
 
 The grayscale strip below the palette matches each color's relative luminance on a standard sRGB display, including its transparency over the checkerboard. It uses linear-light luminance, not an RGB average or the picker's lightness channel. Actual perceived brightness varies with the display, viewing conditions, and observer.
 
-The strip immediately below it shows a linear Start-to-End brightness reference with the same number of steps as the palette. It ignores the middle color and interpolation mode while matching the endpoints and transparency.
+The next two rows show a harmonized palette and its brightness. Harmonization keeps the endpoints, hue path, and alpha, then adjusts intermediate lightness to space APCA contrast evenly. It automatically chooses a black or white contrast background from the original strip and reduces chroma where needed to fit Display P3. Copy harmonized copies the generated CSS variables. All four rows share the same step count and scroll together.
 
 ### Harmonizer
 

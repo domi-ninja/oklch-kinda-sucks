@@ -453,6 +453,7 @@ export function App({ shared }: { shared?: PresetShare }) {
                 set("selected", null);
               }}
               onCopy={() => copy(paletteCss(ramp.colors))}
+              onCopyHarmonized={(colors) => copy(paletteCss(colors))}
             />
           )}
           {pickers.map((panel, panelIndex) => (
