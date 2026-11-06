@@ -8,6 +8,7 @@ import { dirname, extname, join } from "node:path";
 import { createServer } from "node:http";
 import { once } from "node:events";
 import { parseColor } from "../src/color";
+import { checkDemoForms } from "./demo-form-checks";
 
 // Opt in because this check installs dependencies in a temporary exported project.
 test("exported React project installs, builds, and runs every sample in both themes", async ({
@@ -115,6 +116,7 @@ test("exported React project installs, builds, and runs every sample in both the
           ),
       ),
     ).toEqual({ l: 0.65, c: 0.1, h: 250, a: 1 });
+    await checkDemoForms(page);
     await page
       .getByRole("button", { name: "Open project", exact: true })
       .click();
@@ -136,6 +138,10 @@ test("exported React project installs, builds, and runs every sample in both the
       page.getByRole("checkbox", { name: "Email notifications", exact: true }),
     ).not.toBeChecked();
     await page
+      .getByRole("button", { name: "Remove member", exact: true })
+      .click();
+    await page
+      .getByRole("alertdialog", { name: "Remove Alex Chen?", exact: true })
       .getByRole("button", { name: "Remove member", exact: true })
       .click();
     await expect(page.getByRole("status")).toHaveText("Member removed");

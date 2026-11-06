@@ -35,6 +35,18 @@
     return getComputedStyle(probe).color === actual;
   }
 
+  /** @param {Element} element @param {string} variant */
+  function variantMatches(element, variant) {
+    if (variant === "dark")
+      return document.documentElement.classList.contains("dark");
+    if (["hover", "focus", "focus-visible", "disabled"].includes(variant))
+      return element.matches(`:${variant}`);
+    const aria = variant.match(/^aria-([\w-]+)$/);
+    if (aria) return element.getAttribute(`aria-${aria[1]}`) === "true";
+    const data = variant.match(/^data-\[([\w-]+)=([\w-]+)\]$/);
+    return !!data && element.getAttribute(`data-${data[1]}`) === data[2];
+  }
+
   /** @param {Element} element @param {string} prefix @param {string} actual */
   function utilityToken(element, prefix, actual) {
     const utilities = [...element.classList].sort(
@@ -44,15 +56,7 @@
       const parts = utility.split(":");
       const base = parts.pop() ?? "";
       if (!base.startsWith(`${prefix}-`)) continue;
-      if (
-        !parts.every((part) =>
-          part === "dark"
-            ? document.documentElement.classList.contains("dark")
-            : ["hover", "focus", "focus-visible", "disabled"].includes(part) &&
-              element.matches(`:${part}`),
-        )
-      )
-        continue;
+      if (!parts.every((part) => variantMatches(element, part))) continue;
       const [name, opacity] = base.slice(prefix.length + 1).split("/");
       if (!name || !/^[\w-]+$/.test(name)) continue;
       const token = `--color-${name}`;
@@ -139,6 +143,18 @@
   function schedule() {
     if (!pending) pending = requestAnimationFrame(inspect);
   }
+  new MutationObserver(schedule).observe(document.body, {
+    subtree: true,
+    childList: true,
+    attributes: true,
+    attributeFilter: [
+      "class",
+      "aria-invalid",
+      "data-removed",
+      "open",
+      "hidden",
+    ],
+  });
   function clear() {
     active = null;
     pointer = null;

@@ -35,7 +35,7 @@ export function PreviewFrame({
       ref={frame}
       data-preview-mode={dark ? "dark" : "light"}
       title={`shadcn/ui ${dark ? "dark" : "light"} preview`}
-      sandbox="allow-scripts"
+      sandbox="allow-scripts allow-forms"
       srcDoc={document}
       onLoad={sendStyles}
       style={{ width, maxWidth: "100%" }}

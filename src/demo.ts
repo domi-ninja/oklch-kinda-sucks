@@ -1,13 +1,127 @@
 export const demoBody = `<main class="min-h-screen bg-background text-foreground p-6 font-sans text-sm">
-  <header class="flex flex-wrap gap-3 items-center justify-between border-b border-border pb-6 mb-6"><strong>Studio / projects</strong><span class="rounded-full bg-secondary px-3 py-2 text-secondary-foreground">Personal workspace</span></header>
+  <header class="flex flex-wrap gap-3 items-center justify-between border-b border-border pb-6 mb-6"><h1 class="font-semibold">Studio / projects</h1><span class="rounded-full bg-secondary px-3 py-2 text-secondary-foreground">Personal workspace</span></header>
   <div class="grid gap-6 md:grid-cols-2">
-    <section class="rounded-xl border border-border bg-card p-6 text-card-foreground"><div class="flex justify-between mb-6"><strong>Website refresh</strong><span class="text-muted-foreground">01</span></div><div class="h-2 rounded-full bg-secondary mb-6"><div class="h-2 w-2/3 rounded-full bg-primary"></div></div><div class="flex flex-wrap gap-3"><button id="project" class="rounded-lg bg-primary px-4 py-3 text-primary-foreground hover:opacity-80">Open project</button><button id="archive" class="rounded-lg border border-border px-4 py-3 hover:bg-muted">Archive</button></div></section>
-    <section class="rounded-xl border border-border bg-card p-6"><strong>Activity</strong><div class="flex items-center gap-3 mt-6"><span class="flex h-10 w-10 items-center justify-center rounded-full bg-accent text-accent-foreground">JD</span><div>Jamie updated the palette<div class="text-muted-foreground mt-2">Just now</div></div></div><div class="mt-6 rounded-lg bg-muted text-muted-foreground p-3" id="status" role="status">All changes saved</div></section>
-    <section class="rounded-xl border border-border bg-card p-6"><strong>Project settings</strong><label class="block mt-6 mb-3" for="project-name">Name</label><input id="project-name" value="Website refresh" class="w-full rounded-lg border border-border bg-background p-3 text-foreground focus:outline-primary"/><label class="flex items-center gap-3 my-6"><input type="checkbox" checked class="accent-primary"/> Email notifications</label><button id="save" class="rounded-lg bg-primary px-4 py-3 text-primary-foreground">Save changes</button></section>
-    <section class="rounded-xl border border-border bg-card p-6"><strong>Team members</strong><div class="flex justify-between py-6 border-b border-border"><span>Jamie Davis</span><span class="text-muted-foreground">Owner</span></div><div class="flex justify-between py-6"><span>Alex Chen</span><span class="text-muted-foreground">Editor</span></div><button id="remove" class="rounded-lg bg-destructive px-4 py-3 text-destructive-foreground">Remove member</button></section>
+    <section class="rounded-xl border border-border bg-card p-6 text-card-foreground">
+      <div class="flex justify-between gap-3 mb-6"><h2 id="project-heading" class="font-semibold">Website refresh</h2><span class="text-muted-foreground">01</span></div>
+      <div class="h-2 rounded-full bg-secondary mb-6" role="progressbar" aria-label="Project progress" aria-valuenow="67" aria-valuemin="0" aria-valuemax="100"><div class="h-2 w-2/3 rounded-full bg-primary"></div></div>
+      <div class="flex flex-wrap gap-3"><button id="project" class="min-h-11 rounded-lg bg-primary px-4 py-3 text-primary-foreground hover:opacity-80">Open project</button><button id="archive" class="min-h-11 rounded-lg border border-border px-4 py-3 hover:bg-muted">Archive</button></div>
+    </section>
+    <section class="rounded-xl border border-border bg-card p-6">
+      <h2 class="font-semibold">Activity</h2><div class="flex items-center gap-3 mt-6"><span class="flex h-10 w-10 items-center justify-center rounded-full bg-accent text-accent-foreground">JD</span><div>Jamie updated the palette<div class="text-muted-foreground mt-2">Just now</div></div></div>
+      <div class="mt-6 rounded-lg bg-muted text-muted-foreground p-3" id="status" role="status">All changes saved</div>
+    </section>
+    <section class="rounded-xl border border-border bg-card p-6">
+      <h2 id="settings-heading" class="font-semibold">Project settings</h2>
+      <form id="project-settings" aria-labelledby="settings-heading" novalidate>
+        <label class="block mt-6 mb-3" for="project-name">Name</label>
+        <input id="project-name" name="project-name" required value="Website refresh" class="w-full rounded-lg border border-border bg-background p-3 text-foreground text-base focus:outline-primary aria-invalid:border-destructive"/>
+        <p id="project-name-error" role="alert" class="mt-3 text-destructive" hidden></p>
+        <label class="flex min-h-11 items-center gap-3 my-6"><input type="checkbox" checked class="accent-primary"/> Email notifications</label>
+        <div class="grid gap-3 mb-6"><p id="notification-address" class="break-all text-muted-foreground">jamie@example.com</p><div><button id="edit-email" type="button" class="min-h-11 rounded-lg border border-border bg-background px-4 py-3 text-foreground hover:bg-muted">Edit notification email</button></div></div>
+        <button id="save" type="submit" class="min-h-11 rounded-lg bg-primary px-4 py-3 text-primary-foreground">Save changes</button>
+      </form>
+    </section>
+    <section class="rounded-xl border border-border bg-card p-6">
+      <h2 class="font-semibold">Team members</h2><div class="flex justify-between gap-3 py-6 border-b border-border"><span>Jamie Davis</span><span class="text-muted-foreground">Owner</span></div><div id="member-row" class="flex justify-between gap-3 py-6"><span>Alex Chen</span><span class="text-muted-foreground">Editor</span></div>
+      <button id="remove" data-removed="false" class="min-h-11 rounded-lg border border-border bg-destructive px-4 py-3 text-destructive-foreground data-[removed=true]:bg-background data-[removed=true]:text-foreground">Remove member</button>
+    </section>
   </div>
+  <dialog id="email-dialog" aria-labelledby="email-heading" aria-describedby="email-description" class="m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-lg overflow-y-auto overscroll-contain rounded-lg border border-border bg-background p-6 text-foreground backdrop:bg-black/60">
+    <form id="email-form" novalidate class="grid gap-6">
+      <div class="grid gap-3"><h2 id="email-heading" class="font-semibold">Notification email</h2><p id="email-description" class="text-muted-foreground">Project notifications will be sent to this address.</p></div>
+      <div class="grid gap-3"><label for="notification-email">Email address</label><input id="notification-email" name="notification-email" type="email" required autocomplete="email" inputmode="email" autocapitalize="none" spellcheck="false" autofocus class="min-h-11 w-full rounded-lg border border-border bg-background p-3 text-base text-foreground focus:outline-primary aria-invalid:border-destructive"/><p id="notification-email-error" role="alert" class="text-destructive" hidden></p></div>
+      <div class="flex flex-wrap justify-end gap-3"><button id="cancel-email" type="button" class="min-h-11 rounded-lg border border-border bg-background px-4 py-3 text-foreground hover:bg-muted">Cancel</button><button type="submit" class="min-h-11 rounded-lg bg-primary px-4 py-3 text-primary-foreground">Save email</button></div>
+    </form>
+  </dialog>
+  <dialog id="remove-dialog" role="alertdialog" aria-labelledby="remove-heading" aria-describedby="remove-description" class="m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-lg overflow-y-auto overscroll-contain rounded-lg border border-border bg-background p-6 text-foreground backdrop:bg-black/60">
+    <div class="grid gap-6"><div class="grid gap-3"><h2 id="remove-heading" class="font-semibold">Remove Alex Chen?</h2><p id="remove-description" class="text-muted-foreground">Alex Chen will lose access to this project. You can restore access afterward.</p></div>
+      <div class="flex flex-wrap justify-end gap-3"><button id="cancel-remove" type="button" autofocus class="min-h-11 rounded-lg border border-border bg-background px-4 py-3 text-foreground hover:bg-muted">Cancel</button><button id="confirm-remove" type="button" class="min-h-11 rounded-lg bg-destructive px-4 py-3 text-destructive-foreground">Remove member</button></div>
+    </div>
+  </dialog>
 </main>`;
-export const demoScript = `document.getElementById('save').onclick=()=>document.getElementById('status').textContent='Settings saved';document.getElementById('project').onclick=()=>document.getElementById('status').textContent='Project opened';document.getElementById('archive').onclick=()=>document.getElementById('status').textContent='Project archived';document.getElementById('remove').onclick=()=>document.getElementById('status').textContent='Member removed';`;
+
+export const demoScript = String.raw`(() => {
+  // Keep Tab inside the preview dialog, including when Chromium would leave the iframe.
+  for (const dialog of document.querySelectorAll('dialog')) dialog.addEventListener('keydown', event => {
+    if (event.key !== 'Tab') return;
+    const controls = dialog.querySelectorAll('input:not([disabled]),button:not([disabled])');
+    const first = controls[0];
+    const last = controls[controls.length - 1];
+    if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+    else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+  });
+  function showModal(dialog) {
+    document.documentElement.style.overflow = 'hidden';
+    dialog.showModal();
+  }
+  for (const dialog of document.querySelectorAll('dialog')) dialog.addEventListener('close', () => {
+    document.documentElement.style.removeProperty('overflow');
+  });
+  const status = document.getElementById('status');
+  const name = document.getElementById('project-name');
+  function errorFor(input, message, id) {
+    const error = document.getElementById(id);
+    error.textContent = message || '';
+    error.hidden = !message;
+    input.setAttribute('aria-invalid', String(!!message));
+    if (message) input.setAttribute('aria-describedby', id);
+    else input.removeAttribute('aria-describedby');
+    return !message;
+  }
+  const validateName = () => errorFor(name, name.value.trim() ? null : 'Enter a project name.', 'project-name-error');
+  name.addEventListener('input', () => { if (name.getAttribute('aria-invalid') === 'true') validateName(); });
+  document.getElementById('project-settings').addEventListener('submit', event => {
+    event.preventDefault();
+    if (!validateName()) { name.focus(); return; }
+    name.value = name.value.trim();
+    document.getElementById('project-heading').textContent = name.value;
+    status.textContent = 'Settings saved';
+  });
+  document.getElementById('project').onclick = () => { status.textContent = 'Project opened'; };
+  document.getElementById('archive').onclick = () => { status.textContent = 'Project archived'; };
+  let email = 'jamie@example.com';
+  const emailDialog = document.getElementById('email-dialog');
+  const emailInput = document.getElementById('notification-email');
+  const emailTrigger = document.getElementById('edit-email');
+  const validateEmail = () => errorFor(emailInput, !emailInput.value.trim() ? 'Enter an email address.' : emailInput.validity.typeMismatch ? 'Enter a valid email address, such as name@example.com.' : null, 'notification-email-error');
+  emailTrigger.onclick = () => {
+    emailInput.value = email;
+    errorFor(emailInput, null, 'notification-email-error');
+    showModal(emailDialog);
+  };
+  emailInput.addEventListener('input', () => { if (emailInput.getAttribute('aria-invalid') === 'true') validateEmail(); });
+  document.getElementById('cancel-email').onclick = () => emailDialog.close();
+  emailDialog.addEventListener('close', () => emailTrigger.focus({ preventScroll: true }));
+  document.getElementById('email-form').addEventListener('submit', event => {
+    event.preventDefault();
+    if (!validateEmail()) { emailInput.focus(); return; }
+    email = emailInput.value.trim();
+    document.getElementById('notification-address').textContent = email;
+    emailDialog.close();
+    status.textContent = 'Notification email saved';
+  });
+  const removeDialog = document.getElementById('remove-dialog');
+  const remove = document.getElementById('remove');
+  const member = document.getElementById('member-row');
+  remove.onclick = () => {
+    if (member.hidden) {
+      member.hidden = false;
+      remove.dataset.removed = 'false';
+      remove.textContent = 'Remove member';
+      status.textContent = 'Member restored';
+    } else showModal(removeDialog);
+  };
+  document.getElementById('cancel-remove').onclick = () => removeDialog.close();
+  removeDialog.addEventListener('close', () => remove.focus({ preventScroll: true }));
+  document.getElementById('confirm-remove').onclick = () => {
+    member.hidden = true;
+    remove.dataset.removed = 'true';
+    remove.textContent = 'Restore member';
+    removeDialog.close();
+    status.textContent = 'Member removed';
+  };
+})();`;
+
 export function demoDocument(
   css: string,
   externalStylesheet = false,

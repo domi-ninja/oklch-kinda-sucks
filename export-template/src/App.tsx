@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -7,12 +7,18 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
+import { NotificationEmailDialog } from "./NotificationEmailDialog";
+import { MemberRemovalDialog } from "./MemberRemovalDialog";
 
 export default function App() {
   const [dark, setDark] = useState(() =>
     document.documentElement.classList.contains("dark"),
   );
   const [name, setName] = useState("Website refresh");
+  const [projectName, setProjectName] = useState(name);
+  const [nameError, setNameError] = useState(false);
+  const nameInput = useRef<HTMLInputElement>(null);
+  const [email, setEmail] = useState("jamie@example.com");
   const [notifications, setNotifications] = useState(true);
   const [removed, setRemoved] = useState(false);
   const [status, setStatus] = useState("All changes saved");
@@ -45,7 +51,7 @@ export default function App() {
         <Card aria-labelledby="project-heading">
           <CardHeader className="flex-row items-center justify-between space-y-0">
             <CardTitle id="project-heading" role="heading" aria-level={2}>
-              {name}
+              {projectName}
             </CardTitle>
             <span className="text-muted-foreground">01</span>
           </CardHeader>
@@ -106,8 +112,17 @@ export default function App() {
           </CardHeader>
           <CardContent>
             <form
+              noValidate
               onSubmit={(event) => {
                 event.preventDefault();
+                if (!name.trim()) {
+                  setNameError(true);
+                  nameInput.current?.focus();
+                  return;
+                }
+                setNameError(false);
+                setName(name.trim());
+                setProjectName(name.trim());
                 setStatus("Settings saved");
               }}
             >
@@ -115,11 +130,28 @@ export default function App() {
                 Name
               </Label>
               <Input
+                ref={nameInput}
                 id="project-name"
+                name="project-name"
+                required
+                aria-invalid={nameError}
+                aria-describedby={nameError ? "project-name-error" : undefined}
                 value={name}
-                onChange={(event) => setName(event.target.value)}
-                className="h-auto rounded-lg bg-background p-3 text-base md:text-base"
+                onChange={(event) => {
+                  setName(event.target.value);
+                  if (nameError) setNameError(!event.target.value.trim());
+                }}
+                className="h-auto rounded-lg bg-background p-3 text-base md:text-base aria-invalid:border-destructive"
               />
+              {nameError && (
+                <p
+                  id="project-name-error"
+                  role="alert"
+                  className="mt-3 text-destructive"
+                >
+                  Enter a project name.
+                </p>
+              )}
               <div className="my-6 flex min-h-11 items-center gap-3">
                 <Checkbox
                   id="notifications"
@@ -134,6 +166,18 @@ export default function App() {
                 >
                   Email notifications
                 </Label>
+              </div>
+              <div className="mb-6 grid gap-3">
+                <p className="break-all text-muted-foreground">{email}</p>
+                <div>
+                  <NotificationEmailDialog
+                    email={email}
+                    onSave={(next) => {
+                      setEmail(next);
+                      setStatus("Notification email saved");
+                    }}
+                  />
+                </div>
               </div>
               <Button
                 type="submit"
@@ -161,16 +205,17 @@ export default function App() {
                 <span className="text-muted-foreground">Editor</span>
               </div>
             )}
-            <Button
-              variant={removed ? "outline" : "destructive"}
-              className="h-auto min-h-11 rounded-lg px-4 py-3"
-              onClick={() => {
-                setRemoved(!removed);
-                setStatus(removed ? "Member restored" : "Member removed");
+            <MemberRemovalDialog
+              removed={removed}
+              onRemove={() => {
+                setRemoved(true);
+                setStatus("Member removed");
               }}
-            >
-              {removed ? "Restore member" : "Remove member"}
-            </Button>
+              onRestore={() => {
+                setRemoved(false);
+                setStatus("Member restored");
+              }}
+            />
           </CardContent>
         </Card>
       </div>
