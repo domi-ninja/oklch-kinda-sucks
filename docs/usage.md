@@ -38,6 +38,8 @@ Add middle color enables a quadratic Bézier curve. Select Middle or drag its M 
 
 Intermediate markers show the generated steps and cannot be edited. Copy palette copies CSS variables for those colors. Palettes save in this browser; a color URL shares only the active endpoint.
 
+Hex labels sit directly on each swatch. APCA contrast chooses black or white text against both checkerboard shades, including transparency. Contrast uses Display P3 on supported screens and browser canvases, otherwise sRGB. Hex values remain sRGB.
+
 The grayscale strip below the palette matches each color's relative luminance on a standard sRGB display, including its transparency over the checkerboard. It uses linear-light luminance, not an RGB average or the picker's lightness channel. Actual perceived brightness varies with the display, viewing conditions, and observer.
 
 The strip immediately below it shows a linear Start-to-End brightness reference with the same number of steps as the palette. It ignores the middle color and interpolation mode while matching the endpoints and transparency.

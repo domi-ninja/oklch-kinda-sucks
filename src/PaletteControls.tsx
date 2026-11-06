@@ -2,7 +2,14 @@ import { useId, useMemo, type CSSProperties } from "react";
 import { Copy } from "lucide-react";
 import { Button } from "./components/ui/button";
 import { NumericInput } from "./NumericInput";
-import { checkerColors, cssColor, sampleColor, type Color } from "./color";
+import {
+  checkerColors,
+  cssColor,
+  sampleColor,
+  sampleChannels,
+  type Color,
+} from "./color";
+import { paletteTextColor, useDisplayColorSpace } from "./paletteContrast";
 import { paletteLabels } from "./palette";
 import {
   pickerModes,
@@ -31,9 +38,31 @@ export function PaletteControls({
   onCopy: () => void;
 }) {
   const brightnessFilter = useId();
-  const hexColors = useMemo(
-    () => colors.map((color) => sampleColor(cssColor(color)).hex),
-    [colors],
+  const displayColorSpace = useDisplayColorSpace();
+  const labels = useMemo(
+    () =>
+      colors.map((color) => {
+        const css = cssColor(color);
+        const sample = sampleColor(css);
+        const backgrounds =
+          color.a < 1
+            ? Object.values(checkerColors).map((background) =>
+                sampleChannels(css, background, displayColorSpace),
+              )
+            : [
+                displayColorSpace === "srgb"
+                  ? sample
+                  : sampleChannels(css, undefined, displayColorSpace),
+              ];
+        return {
+          hex: sample.hex,
+          color: paletteTextColor(
+            backgrounds.map((background) => background.channels),
+            backgrounds[0].colorSpace,
+          ),
+        };
+      }),
+    [colors, displayColorSpace],
   );
   const brightnessReference = useMemo(() => {
     // Composite endpoints before interpolating linear-light RGB so alpha also matches each checker shade.
@@ -192,9 +221,10 @@ export function PaletteControls({
                       {!brightness && (
                         <code
                           className="palette-hex"
-                          title={`sRGB ${hexColors[index]}`}
+                          style={{ color: labels[index].color }}
+                          title={`sRGB ${labels[index].hex}`}
                         >
-                          {hexColors[index]}
+                          {labels[index].hex}
                         </code>
                       )}
                     </li>

@@ -30,18 +30,27 @@ export function parseColor(text: string): Color | null {
     ? { ...result, h: ((result.h % 360) + 360) % 360 }
     : null;
 }
-let sampleContext: CanvasRenderingContext2D | null = null;
+const sampleContexts = new Map<
+  PredefinedColorSpace,
+  CanvasRenderingContext2D
+>();
 export const checkerColors = { dark: "#a6a6a6", light: "#bfbfbf" };
-export function sampleColor(color: string, background?: string) {
-  if (!sampleContext) {
+export function sampleChannels(
+  color: string,
+  background?: string,
+  colorSpace: PredefinedColorSpace = "srgb",
+) {
+  let ctx = sampleContexts.get(colorSpace);
+  if (!ctx) {
     const canvas = document.createElement("canvas");
     canvas.width = canvas.height = 1;
-    sampleContext = canvas.getContext("2d", {
-      colorSpace: "srgb",
-      willReadFrequently: true,
-    });
+    ctx =
+      canvas.getContext("2d", {
+        colorSpace,
+        willReadFrequently: true,
+      }) ?? undefined;
+    if (ctx) sampleContexts.set(colorSpace, ctx);
   }
-  const ctx = sampleContext;
   if (!ctx) throw new Error("Canvas 2D is unavailable");
   ctx.fillStyle = "#000";
   ctx.fillStyle = color;
@@ -56,10 +65,20 @@ export function sampleColor(color: string, background?: string) {
     ctx.fillStyle = color;
   }
   ctx.fillRect(0, 0, 1, 1);
-  const [r, g, b, a] = ctx.getImageData(0, 0, 1, 1).data;
+  const image = ctx.getImageData(0, 0, 1, 1, { colorSpace });
+  const [r, g, b, a] = image.data;
+  // Browsers can ignore P3 requests; contrast must use the actual readback space.
   return {
+    channels: [r, g, b, a] as const,
+    colorSpace: image.colorSpace ?? "srgb",
+  };
+}
+export function sampleColor(color: string, background?: string) {
+  const sample = sampleChannels(color, background);
+  const [r, g, b, a] = sample.channels;
+  return {
+    ...sample,
     rgb: `rgb(${r} ${g} ${b} / ${round(a / 255)})`,
     hex: `#${[r, g, b].map((n) => n.toString(16).padStart(2, "0")).join("")}${a === 255 ? "" : a.toString(16).padStart(2, "0")}`,
-    channels: [r, g, b, a],
   };
 }
