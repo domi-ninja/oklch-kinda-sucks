@@ -363,6 +363,7 @@ input[type="range"]::-moz-range-thumb {
 }
 .preset-actions {
   display: flex;
+  flex-wrap: wrap;
   padding: 0 16px 16px;
   gap: 8px;
 }
@@ -698,7 +699,8 @@ select {
     min-height: 44px;
   }
   .mode-generator > select,
-  .mode-actions button {
+  .mode-actions button,
+  .preset-actions button {
     min-height: 44px;
   }
   .swatches {

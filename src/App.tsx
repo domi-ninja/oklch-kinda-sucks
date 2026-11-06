@@ -87,6 +87,19 @@ function initialWorkspace(): Workspace {
     pickers: [{ id: "initial", mode: "OKHCL" }],
   };
 }
+function themeEntries(source: string) {
+  return [...source.matchAll(/oklch\([^)]*\)/g)].map((match) => ({
+    value: match[0],
+    index: match.index,
+    name:
+      (source.lastIndexOf(".dark {", match.index) >
+      source.lastIndexOf("}", match.index)
+        ? "dark / "
+        : "") +
+      (source.slice(0, match.index).match(/--([\w-]+):\s*$/)?.[1] ??
+        `color-${match.index}`),
+  }));
+}
 export function App({ shared }: { shared?: Snapshot }) {
   const { state, set, setColor, updateState } = useWorkspace(
     initialWorkspace,
@@ -122,21 +135,7 @@ export function App({ shared }: { shared?: Snapshot }) {
   const [shareUrl, setShareUrl] = useState("");
   const [shareError, setShareError] = useState("");
   const compiled = useCompiler(source);
-  const entries = useMemo(
-    () =>
-      [...source.matchAll(/oklch\([^)]*\)/g)].map((match) => ({
-        value: match[0],
-        index: match.index,
-        name:
-          (source.lastIndexOf(".dark {", match.index) >
-          source.lastIndexOf("}", match.index)
-            ? "dark / "
-            : "") +
-          (source.slice(0, match.index).match(/--([\w-]+):\s*$/)?.[1] ??
-            `color-${match.index}`),
-      })),
-    [source],
-  );
+  const entries = useMemo(() => themeEntries(source), [source]);
   const pairedEntries = useMemo(() => {
     const groups = new Map<
       string,
@@ -164,7 +163,20 @@ export function App({ shared }: { shared?: Snapshot }) {
       return null;
     }
   }, [color]);
-  const dirty = source !== saved.find((p) => p.id === active)?.source;
+  const activePreset = saved.find((p) => p.id === active);
+  const dirty = source !== activePreset?.source;
+  const discardPresetChanges = () => {
+    if (!activePreset) return;
+    const selectedName =
+      selected === null ? undefined : entries[selected]?.name;
+    const restored = themeEntries(activePreset.source);
+    const index = restored.findIndex((entry) => entry.name === selectedName);
+    const restoredColor = index < 0 ? null : parseColor(restored[index].value);
+    set("source", activePreset.source);
+    set("selected", restoredColor ? index : null);
+    if (restoredColor) setColor(restoredColor);
+    setMessage("Preset changes discarded");
+  };
   const update = (next: Color) => {
     setColor(next);
     if (selected !== null && entries[selected]) {
@@ -544,6 +556,15 @@ export function App({ shared }: { shared?: Snapshot }) {
               >
                 <Trash2 size={15} />
               </Button>
+              {dirty && activePreset && (
+                <Button
+                  variant="outline"
+                  className="basis-full"
+                  onClick={discardPresetChanges}
+                >
+                  Discard changes
+                </Button>
+              )}
             </div>
           </section>
           <ModeGenerator
