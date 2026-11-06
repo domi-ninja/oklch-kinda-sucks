@@ -178,6 +178,10 @@ test("rendered body text, muted text and labels remain readable in light and dar
       await page
         .getByLabel("Generate mode direction", { exact: true })
         .selectOption(from);
+      const previousSource = await page.evaluate(
+        (key) => JSON.parse(localStorage.getItem(key)!).source as string,
+        workspaceStorageKey,
+      );
       await page
         .getByRole("button", { name: `Generate ${target} mode`, exact: true })
         .click();
@@ -187,6 +191,34 @@ test("rendered body text, muted text and labels remain readable in light and dar
       const frame = page.frameLocator(
         `iframe[title="shadcn/ui ${target} preview"]`,
       );
+      await expect
+        .poll(() =>
+          page.evaluate(
+            (key) => JSON.parse(localStorage.getItem(key)!).source as string,
+            workspaceStorageKey,
+          ),
+        )
+        .not.toBe(previousSource);
+      const state = workspaceSchema.parse(
+        await page.evaluate(
+          (key) => JSON.parse(localStorage.getItem(key)!),
+          workspaceStorageKey,
+        ),
+      );
+      const foreground = readThemeColors(state.source).declarations.find(
+        (entry) => entry.mode === target && entry.name === "--color-foreground",
+      )!;
+      await expect
+        .poll(() =>
+          frame
+            .locator("main")
+            .evaluate((element) =>
+              getComputedStyle(element)
+                .getPropertyValue("--color-foreground")
+                .trim(),
+            ),
+        )
+        .toBe(foreground.value);
       const contrasts = await frame.locator("main").evaluate((main) => {
         const canvas = document.createElement("canvas");
         canvas.width = 2;
