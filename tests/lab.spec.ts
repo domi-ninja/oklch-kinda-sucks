@@ -119,8 +119,26 @@ test("theme edits compile, presets persist, and exported app works offline", asy
   const path = await downloaded.path();
   const { readFile } = await import("node:fs/promises");
   const files = unzipSync(await readFile(path!));
-  expect(Object.keys(files)).toContain("styles.css");
-  expect(strFromU8(files["theme.css"])).toContain("oklch(0.5 0.1 200)");
+  expect(Object.keys(files)).toContain("preview/styles.css");
+  expect(Object.keys(files)).toEqual(
+    expect.arrayContaining([
+      "src/App.tsx",
+      "src/main.tsx",
+      "vite.config.ts",
+      "tsconfig.json",
+      "components.json",
+      "src/components/ui/button.tsx",
+      "src/components/ui/card.tsx",
+      "src/components/ui/badge.tsx",
+      "src/components/ui/input.tsx",
+      "src/components/ui/label.tsx",
+      "src/components/ui/checkbox.tsx",
+      "src/components/ui/avatar.tsx",
+      "src/components/ui/progress.tsx",
+      "LICENSE.shadcn.md",
+    ]),
+  );
+  expect(strFromU8(files["src/theme.css"])).toContain("oklch(0.5 0.1 200)");
   const { mkdtemp, writeFile, mkdir } = await import("node:fs/promises");
   const { tmpdir } = await import("node:os");
   const { join, dirname } = await import("node:path");
@@ -132,7 +150,7 @@ test("theme edits compile, presets persist, and exported app works offline", asy
     await writeFile(target, data);
   }
   await page.context().setOffline(true);
-  await page.goto(pathToFileURL(join(extracted, "index.html")).href);
+  await page.goto(pathToFileURL(join(extracted, "preview/index.html")).href);
   await expect(page.getByRole("button", { name: "Open project" })).toHaveCSS(
     "background-color",
     "oklch(0.5 0.1 200)",
@@ -246,8 +264,8 @@ test("light and dark previews stay stacked and both export offline", async ({
   }
   await page.context().setOffline(true);
   for (const [name, background] of [
-    ["index.html", "oklch(0.985 0.002 180)"],
-    ["dark.html", "oklch(0.18 0.008 260)"],
+    ["preview/index.html", "oklch(0.985 0.002 180)"],
+    ["preview/dark.html", "oklch(0.18 0.008 260)"],
   ]) {
     await page.goto(pathToFileURL(join(extracted, name)).href);
     await expect(page.locator("main")).toHaveCSS(

@@ -1,0 +1,21 @@
+@import "./theme.css";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme default inline {
+  --color-input: var(--color-border);
+  --color-ring: var(--color-primary);
+}
+
+@layer base {
+  body {
+    margin: 0;
+  }
+  button {
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  input {
+    font-size: 16px;
+  }
+}

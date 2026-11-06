@@ -27,7 +27,7 @@ Light and dark previews appear together, one above the other.
 
 Choose Light → dark or Dark → light above the theme colors, adjust Background lightness, Contrast, and Chroma, then click Generate. Surfaces use OKHCL lightness. Text colors derive contrast from their matching surfaces, with separate targets for body text, muted text, and button labels. Text tint is limited to keep accent saturation out of labels. Generation preserves hue, alpha, and the source mode's colors. Undo restores the previous stylesheet. Generator settings stay in browser storage and are included in Share links.
 
-The ZIP contains standalone `index.html` and `dark.html` demos, compiled `styles.css`, editable `theme.css`, and a rebuildable demo in `src/index.html`. Run `npm install && npm run build` in the extracted folder to rebuild the CSS after editing the theme.
+Export app downloads a React, TypeScript, Vite, Tailwind CSS, and shadcn/ui project with all four sample panels. Run `npm install` and `npm run dev` in the extracted folder. Edit `src/theme.css` for colors or `src/App.tsx` for the sample UI. The light/dark button switches themes; `?theme=dark` starts in dark mode. `npm run build` creates `dist` for static hosting. The `preview` folder contains standalone light and dark HTML snapshots that open without installing dependencies.
 
 ## Color formats
 
@@ -49,6 +49,8 @@ pnpm test
 ```
 
 Tests cover browser canvas output, alpha, out-of-gamut colors, keyboard sliders, mobile overflow, live compilation, browser presets, and offline exports in Chromium, Firefox, and WebKit.
+
+To install and build the downloaded React project and exercise its sample controls, run `EXPORT_BUILD=1 pnpm exec playwright test tests/export-app.spec.ts --project=chromium`. This check needs registry access and installs dependencies in a temporary folder.
 
 ## Deploy
 

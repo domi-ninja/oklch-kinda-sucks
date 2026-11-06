@@ -5,6 +5,7 @@ COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 COPY index.html tsconfig.json vite.config.ts server.ts ./
 COPY src/ ./src/
+COPY export-template/ ./export-template/
 COPY public/ ./public/
 RUN pnpm exec tsc --noEmit && pnpm exec vite build
 RUN pnpm prune --prod

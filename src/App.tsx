@@ -10,7 +10,6 @@ import {
   Link,
   LoaderCircle,
 } from "lucide-react";
-import { zipSync, strToU8 } from "fflate";
 import { Button } from "./components/ui/button";
 import { Picker } from "./Picker";
 import { PaletteControls } from "./PaletteControls";
@@ -132,6 +131,7 @@ export function App({ shared }: { shared?: Snapshot }) {
   const [message, setMessage] = useState("");
   const updateAvailable = useAppUpdate();
   const [sharing, setSharing] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [shareUrl, setShareUrl] = useState("");
   const [shareError, setShareError] = useState("");
   const compiled = useCompiler(source);
@@ -278,51 +278,27 @@ export function App({ shared }: { shared?: Snapshot }) {
       setSharing(false);
     }
   };
-  const exportApp = () => {
-    const files = {
-      "index.html": strToU8(demoDocument(compiled.css, true)),
-      "dark.html": strToU8(demoDocument(compiled.css, true, true)),
-      "styles.css": strToU8(compiled.css),
-      "theme.css": strToU8(source),
-      "src/index.html": strToU8(
-        demoDocument(compiled.css, true).replace(
-          'href="./styles.css"',
-          'href="../styles.css"',
-        ),
-      ),
-      "src/dark.html": strToU8(
-        demoDocument(compiled.css, true, true).replace(
-          'href="./styles.css"',
-          'href="../styles.css"',
-        ),
-      ),
-      "package.json": strToU8(
-        JSON.stringify(
-          {
-            private: true,
-            scripts: { build: "tailwindcss -i theme.css -o styles.css" },
-            devDependencies: {
-              tailwindcss: "^4.3.3",
-              "@tailwindcss/cli": "^4.3.3",
-            },
-          },
-          null,
-          2,
-        ),
-      ),
-    };
-    const presetName =
-      (saved.find((preset) => preset.id === active)?.name ?? "custom-theme")
-        .normalize("NFKC")
-        .toLowerCase()
-        .replace(/[^\p{L}\p{N}]+/gu, "-")
-        .replace(/^-+|-+$/g, "") || "custom-theme";
-    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-    download(
-      `${presetName}-${timestamp}.zip`,
-      zipSync(files) as Uint8Array<ArrayBuffer>,
-      "application/zip",
-    );
+  const exportApp = async () => {
+    setExporting(true);
+    try {
+      const { exportAppArchive } = await import("./exportApp");
+      const presetName =
+        (saved.find((preset) => preset.id === active)?.name ?? "custom-theme")
+          .normalize("NFKC")
+          .toLowerCase()
+          .replace(/[^\p{L}\p{N}]+/gu, "-")
+          .replace(/^-+|-+$/g, "") || "custom-theme";
+      const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+      download(
+        `${presetName}-${timestamp}.zip`,
+        exportAppArchive(source, compiled.css),
+        "application/zip",
+      );
+    } catch {
+      setMessage("Could not export app. Try again.");
+    } finally {
+      setExporting(false);
+    }
   };
   return (
     <>
@@ -734,10 +710,19 @@ export function App({ shared }: { shared?: Snapshot }) {
               CSS
             </Button>
             <Button
-              disabled={!compiled.css || compiled.pending || !!compiled.error}
+              disabled={
+                !compiled.css ||
+                compiled.pending ||
+                !!compiled.error ||
+                exporting
+              }
               onClick={exportApp}
             >
-              <ArrowDownToLine size={15} />
+              {exporting ? (
+                <LoaderCircle size={15} className="motion-safe:animate-spin" />
+              ) : (
+                <ArrowDownToLine size={15} />
+              )}
               Export app
             </Button>
           </div>

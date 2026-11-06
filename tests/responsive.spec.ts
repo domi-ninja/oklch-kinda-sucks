@@ -2,6 +2,43 @@ import { test, expect } from "@playwright/test";
 
 const fourPickers = "/#color=0.6,0.15,180,1&pickers=RGB,HSL,HCL,OKHCL";
 
+test("light and dark frames share all available preview height on short and tall screens", async ({
+  page,
+}) => {
+  await page.goto("/");
+  for (const [width, height] of [
+    [1440, 600],
+    [1440, 900],
+    [1440, 2000],
+    [390, 844],
+  ]) {
+    await page.setViewportSize({ width, height });
+    const wrap = page.locator(".iframe-wrap");
+    const layout = await wrap.evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+      const frames = Array.from(element.querySelectorAll("iframe"), (frame) => {
+        const bounds = frame.getBoundingClientRect();
+        return { height: bounds.height, bottom: bounds.bottom };
+      });
+      return {
+        bottom:
+          rect.bottom - parseFloat(getComputedStyle(element).paddingBottom),
+        frames,
+        overflow: element.scrollHeight > element.clientHeight + 1,
+      };
+    });
+    expect(layout.frames).toHaveLength(2);
+    expect(
+      Math.abs(layout.frames[1].bottom - layout.bottom),
+    ).toBeLessThanOrEqual(1);
+    expect(
+      Math.abs(layout.frames[0].height - layout.frames[1].height),
+    ).toBeLessThanOrEqual(1);
+    expect(layout.frames[0].height).toBeGreaterThan(height >= 2000 ? 700 : 70);
+    expect(layout.overflow).toBe(false);
+  }
+});
+
 test("mobile pickers use half-width columns and wrap their controls and theme tokens", async ({
   page,
 }) => {
