@@ -59,7 +59,7 @@ export default function App() {
             <Progress
               aria-label="Project progress"
               value={67}
-              className="mb-6 bg-secondary"
+              className="mb-6"
             />
             <div className="flex flex-wrap gap-3">
               <Button

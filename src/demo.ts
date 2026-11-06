@@ -3,7 +3,7 @@ export const demoBody = `<main class="min-h-screen bg-background text-foreground
   <div class="grid gap-6 md:grid-cols-2">
     <section class="rounded-xl border border-border bg-card p-6 text-card-foreground">
       <div class="flex justify-between gap-3 mb-6"><h2 id="project-heading" class="font-semibold">Website refresh</h2><span class="text-muted-foreground">01</span></div>
-      <div class="h-2 rounded-full bg-secondary mb-6" role="progressbar" aria-label="Project progress" aria-valuenow="67" aria-valuemin="0" aria-valuemax="100"><div class="h-2 w-2/3 rounded-full bg-primary"></div></div>
+      <div class="h-2 rounded-full bg-primary/20 mb-6" role="progressbar" aria-label="Project progress" aria-valuenow="67" aria-valuemin="0" aria-valuemax="100"><div class="h-2 w-2/3 rounded-full bg-primary"></div></div>
       <div class="flex flex-wrap gap-3"><button id="project" class="min-h-11 rounded-lg bg-primary px-4 py-3 text-primary-foreground hover:opacity-80">Open project</button><button id="archive" class="min-h-11 rounded-lg border border-border px-4 py-3 hover:bg-muted">Archive</button></div>
     </section>
     <section class="rounded-xl border border-border bg-card p-6">
