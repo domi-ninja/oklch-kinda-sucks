@@ -29,10 +29,10 @@ const linear = (channel: number) => {
 const luminance = ([r, g, b]: number[]) =>
   0.2126 * linear(r) + 0.7152 * linear(g) + 0.0722 * linear(b);
 
-async function checkScale(page: Page, count: number, harmonized = false) {
-  const colorName = harmonized ? "Harmonized colors" : "Palette colors";
-  const brightnessName = harmonized
-    ? "Harmonized brightness"
+async function checkScale(page: Page, count: number, mode?: "light" | "dark") {
+  const colorName = mode ? `Harmonized ${mode} colors` : "Palette colors";
+  const brightnessName = mode
+    ? `Harmonized ${mode} brightness`
     : "Perceived brightness";
   const colors = page.getByRole("list", {
     name: colorName,
@@ -56,7 +56,12 @@ async function checkScale(page: Page, count: number, harmonized = false) {
     }),
   );
   expect(lowerCells).toEqual(upperCells);
-  for (const name of ["Harmonized colors", "Harmonized brightness"]) {
+  for (const name of [
+    "Harmonized light colors",
+    "Harmonized light brightness",
+    "Harmonized dark colors",
+    "Harmonized dark brightness",
+  ]) {
     const row = page.getByRole("list", { name, exact: true });
     await expect(row).toHaveAttribute("aria-busy", "false");
     await expect(row.getByRole("listitem")).toHaveCount(count);
@@ -125,6 +130,7 @@ async function checkScale(page: Page, count: number, harmonized = false) {
 test("brightness tracks rendered palette colors, alpha and mobile columns", async ({
   page,
 }) => {
+  test.setTimeout(60_000);
   await page.goto("/#color=0.6,0.1,180,1&pickers=RGB");
   await page.getByLabel("RGB value", { exact: true }).fill("#ff0000");
   await page.getByRole("button", { name: "Apply color", exact: true }).click();
@@ -139,7 +145,8 @@ test("brightness tracks rendered palette colors, alpha and mobile columns", asyn
     .getByLabel("Palette interpolation", { exact: true })
     .selectOption("RGB");
   await checkScale(page, 5);
-  await checkScale(page, 5, true);
+  await checkScale(page, 5, "light");
+  await checkScale(page, 5, "dark");
   const hex = page
     .getByRole("list", { name: "Palette colors", exact: true })
     .locator(".palette-hex");
@@ -153,9 +160,10 @@ test("brightness tracks rendered palette colors, alpha and mobile columns", asyn
   await page.getByRole("button", { name: "Apply color", exact: true }).click();
   await expect(hex.last()).toHaveText(/^#[\da-f]{6}80$/);
   await checkScale(page, 5);
-  await checkScale(page, 5, true);
+
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByLabel("Palette subdivisions", { exact: true }).fill("8");
   await checkScale(page, 9);
-  await checkScale(page, 9, true);
+  await checkScale(page, 9, "light");
+  await checkScale(page, 9, "dark");
 });

@@ -44,7 +44,11 @@ Hex labels sit directly on each swatch. APCA contrast chooses black or white tex
 
 The grayscale strip below the palette matches each color's relative luminance on a standard sRGB display, including its transparency over the checkerboard. It uses linear-light luminance, not an RGB average or the picker's lightness channel. Actual perceived brightness varies with the display, viewing conditions, and observer.
 
-The next two rows show a harmonized palette and its brightness. Harmonization keeps the endpoints, hue path, and alpha, then adjusts intermediate lightness to space APCA contrast evenly. It automatically chooses a black or white contrast background from the original strip and reduces chroma where needed to fit Display P3. Copy harmonized copies the generated CSS variables. All four rows share the same step count and scroll together.
+Harmonized light and Harmonized dark each have a color strip and a brightness strip. The original gradient is read from light on the left to dark on the right. Its hue and chroma path supplies the theme colors, including the middle control, while APCA adjusts the tones for each mode. Generated theme fills are opaque and text is pure black or white. All six rows share the same step count and scroll together.
+
+Apply palette to preset fills both modes of the current preset draft: backgrounds, cards, primary, secondary, accent, muted, borders, inputs, rings, and sidebar colors. Primary uses the middle hue; secondary and accent use the quarter points. Error colors keep their existing fills. Custom CSS and non-color settings are preserved. Undo reverses the apply action in one step. Use the usual preset save controls to keep the updated stylesheet as a saved preset.
+
+Copy light theme and Copy dark theme copy the generated token declarations for their respective modes.
 
 ### Harmonizer
 

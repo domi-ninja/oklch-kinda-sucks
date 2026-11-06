@@ -17,6 +17,7 @@ import { Picker } from "./Picker";
 import { PaletteControls } from "./PaletteControls";
 import { ModeGenerator } from "./ModeGenerator";
 import { defaultModeGeneration } from "./modeGeneration";
+import { applyPaletteTheme, themePaletteCss } from "./applyPaletteTheme";
 import { createPaletteRamp, paletteCss } from "./palette";
 import { ColorEditors } from "./ColorEditors";
 import { ColorSwatches } from "./ColorSwatches";
@@ -440,6 +441,7 @@ export function App({ shared }: { shared?: PresetShare }) {
               start={start}
               palette={palette}
               colors={ramp.colors}
+              path={ramp.path}
               onChange={(patch) =>
                 updateState("palette", (current) =>
                   current ? { ...current, ...patch } : current,
@@ -453,7 +455,14 @@ export function App({ shared }: { shared?: PresetShare }) {
                 set("selected", null);
               }}
               onCopy={() => copy(paletteCss(ramp.colors))}
-              onCopyHarmonized={(colors) => copy(paletteCss(colors))}
+              onCopyHarmonized={(generated, mode) =>
+                copy(themePaletteCss(generated, mode))
+              }
+              onApply={(generated) => {
+                set("source", applyPaletteTheme(source, generated));
+                set("selected", null);
+                setMessage("Palette applied to preset");
+              }}
             />
           )}
           {pickers.map((panel, panelIndex) => (

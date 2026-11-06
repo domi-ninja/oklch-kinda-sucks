@@ -231,6 +231,10 @@ h2 {
   display: grid;
   gap: 4px;
 }
+.palette-mode-rows {
+  display: grid;
+  gap: 4px;
+}
 .palette-strip {
   display: grid;
   overflow: hidden;
@@ -266,6 +270,9 @@ h2 {
 }
 .palette-actions > span {
   flex: 1;
+}
+.palette-actions > button {
+  min-height: 44px;
 }
 .plane-labels {
   position: absolute;

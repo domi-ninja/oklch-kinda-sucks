@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import type { Color } from "./color";
-import type { HarmonizedPalette } from "./paletteHarmonizer";
+import type { HarmonizedPalettes } from "./paletteHarmonizer";
 
-type Job = { id: number; colors: Color[] };
-type Reply = { id: number; palette?: HarmonizedPalette; error?: string };
+type Job = { id: number; colors: Color[]; path: Color[] };
+type Reply = { id: number; palette?: HarmonizedPalettes; error?: string };
 
-export function useHarmonizedPalette(colors: Color[]) {
+export function useHarmonizedPalette(colors: Color[], path: Color[]) {
   const worker = useRef<Worker | null>(null);
   const busy = useRef(false);
   const queued = useRef<Job | null>(null);
@@ -13,7 +13,8 @@ export function useHarmonizedPalette(colors: Color[]) {
   const sequence = useRef(0);
   const [result, setResult] = useState<{
     source: Color[];
-    palette?: HarmonizedPalette;
+    path: Color[];
+    palette?: HarmonizedPalettes;
     error?: string;
   } | null>(null);
   const send = (job: Job) => {
@@ -40,6 +41,7 @@ export function useHarmonizedPalette(colors: Color[]) {
       if (job?.id === event.data.id)
         setResult({
           source: job.colors,
+          path: job.path,
           palette: event.data.palette,
           error: event.data.error,
         });
@@ -51,6 +53,7 @@ export function useHarmonizedPalette(colors: Color[]) {
       if (job)
         setResult({
           source: job.colors,
+          path: job.path,
           error: "Could not harmonize the palette.",
         });
     };
@@ -64,17 +67,20 @@ export function useHarmonizedPalette(colors: Color[]) {
 
   useEffect(
     function harmonizePaletteChanges() {
-      const job = { id: ++sequence.current, colors };
+      const job = { id: ++sequence.current, colors, path };
       latest.current = job;
       if (busy.current) queued.current = job;
       else send(job);
     },
-    [colors],
+    [colors, path],
   );
 
   return {
     palette: result?.palette,
-    pending: result?.source !== colors,
-    error: result?.source === colors ? result.error : undefined,
+    pending: result?.source !== colors || result?.path !== path,
+    error:
+      result?.source === colors && result.path === path
+        ? result.error
+        : undefined,
   };
 }

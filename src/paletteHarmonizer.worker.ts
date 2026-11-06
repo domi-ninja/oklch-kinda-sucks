@@ -1,11 +1,13 @@
 import { harmonizePalette } from "./paletteHarmonizer";
 import type { Color } from "./color";
 
-self.onmessage = (event: MessageEvent<{ id: number; colors: Color[] }>) => {
+self.onmessage = (
+  event: MessageEvent<{ id: number; colors: Color[]; path: Color[] }>,
+) => {
   try {
     self.postMessage({
       id: event.data.id,
-      palette: harmonizePalette(event.data.colors),
+      palette: harmonizePalette(event.data.colors, event.data.path),
     });
   } catch {
     self.postMessage({

@@ -7,15 +7,16 @@ import {
   type Color,
 } from "./color";
 import { paletteTextColor, useDisplayColorSpace } from "./paletteContrast";
+import type { ThemeMode } from "./paletteHarmonizer";
 
 export function PaletteRows({
   colors,
-  harmonized = false,
+  variant,
   brightnessFilter,
   pending = false,
 }: {
   colors: Color[];
-  harmonized?: boolean;
+  variant?: ThemeMode;
   brightnessFilter: string;
   pending?: boolean;
 }) {
@@ -53,11 +54,11 @@ export function PaletteRows({
           className={`palette-strip${brightness ? " palette-brightness" : ""}`}
           aria-label={
             brightness
-              ? harmonized
-                ? "Harmonized brightness"
+              ? variant
+                ? `Harmonized ${variant} brightness`
                 : "Perceived brightness"
-              : harmonized
-                ? "Harmonized colors"
+              : variant
+                ? `Harmonized ${variant} colors`
                 : "Palette colors"
           }
           aria-busy={pending}

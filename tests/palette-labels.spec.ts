@@ -43,7 +43,9 @@ test("hex labels are centered directly on swatches and adapt to transparency", a
   await editor.fill("#ffffff");
   await apply.click();
   await page.getByLabel("Palette subdivisions", { exact: true }).fill("2");
-  const labels = page.locator(".palette-hex");
+  const labels = page
+    .getByRole("list", { name: "Palette colors", exact: true })
+    .locator(".palette-hex");
   await expect(labels.first()).toHaveCSS("color", "rgb(255, 255, 255)");
   await expect(labels.last()).toHaveCSS("color", "rgb(0, 0, 0)");
   const layout = await labels.evaluateAll((elements) =>
