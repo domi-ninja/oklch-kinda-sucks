@@ -1,5 +1,3 @@
-import previewBridge from "./previewBridge.js?raw";
-
 export const demoBody = `<main class="min-h-screen bg-background text-foreground p-6 font-sans text-sm">
   <header class="flex flex-wrap gap-3 items-center justify-between border-b border-border pb-6 mb-6"><strong>Studio / projects</strong><span class="rounded-full bg-secondary px-3 py-2 text-secondary-foreground">Personal workspace</span></header>
   <div class="grid gap-6 md:grid-cols-2">
@@ -14,13 +12,13 @@ export function demoDocument(
   css: string,
   externalStylesheet = false,
   dark = false,
-  options: { live?: boolean } = {},
+  options: { script?: string } = {},
 ) {
   const styles = externalStylesheet
     ? '<link rel="stylesheet" href="./styles.css">'
     : `<style id="preview-theme">${css.replace(/<\/style/gi, "<\\/style")}</style>`;
-  const liveStyles = options.live ? `;${previewBridge}` : "";
-  return `<!doctype html><html lang="en" class="${dark ? "dark" : ""}"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>shadcn/ui ${dark ? "dark" : "light"} preview</title>${styles}</head><body>${demoBody}<script>${demoScript}${liveStyles}</script></body></html>`;
+  const liveScript = options.script ? `;${options.script}` : "";
+  return `<!doctype html><html lang="en" class="${dark ? "dark" : ""}"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>shadcn/ui ${dark ? "dark" : "light"} preview</title>${styles}</head><body>${demoBody}<script>${demoScript}${liveScript}</script></body></html>`;
 }
 export const candidates = [
   ...new Set(

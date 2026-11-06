@@ -1,5 +1,6 @@
 import { useLayoutEffect, useMemo, useRef } from "react";
 import { demoDocument } from "./demo";
+import previewBridge from "./previewBridge.js?raw";
 import type { Workspace } from "./workspaceSchema";
 
 export function PreviewFrame({
@@ -14,7 +15,7 @@ export function PreviewFrame({
   const frame = useRef<HTMLIFrameElement>(null);
   const latestCss = useRef(css);
   const document = useMemo(
-    () => demoDocument("", false, dark, { live: true }),
+    () => demoDocument("", false, dark, { script: previewBridge }),
     [dark],
   );
   const sendStyles = () =>

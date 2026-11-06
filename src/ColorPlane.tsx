@@ -1,5 +1,5 @@
-import { useEffect, useId, useRef } from "react";
-import { cssColor, round, type Color } from "./color";
+import { useEffect, useId, useRef, type ReactNode } from "react";
+import { cssColor, type Color } from "./color";
 import { channels, fromCoordinates, type Coordinates } from "./pickerModes";
 import { palettePaths, type PlanePalette } from "./palette";
 import type { PlaneMapping } from "./planes";
@@ -21,6 +21,7 @@ export function ColorPlane({
   mode,
   values,
   mapping,
+  control,
   render,
   onChange,
   palette,
@@ -29,13 +30,14 @@ export function ColorPlane({
   mode: PickerMode;
   values: Coordinates;
   mapping: PlaneMapping;
+  control: ReactNode;
   render: ReturnType<typeof usePlaneRenderer>;
   onChange: (color: Color) => void;
   palette?: PlanePalette;
 }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const dragging = useRef<PaletteEndpoint | null>(null);
-  const captionId = useId();
+  const controlsId = useId();
   const config = channels[mode];
   const fixedValue = values[mapping.fixed];
   const name = `${mode} ${config[mapping.x].name} × ${config[mapping.y].name}`;
@@ -93,15 +95,14 @@ export function ColorPlane({
 
   return (
     <div className="color-plane">
-      <div className="plane-caption" id={captionId}>
-        {config[mapping.fixed].name} {round(fixedValue, 3)}
-        {config[mapping.fixed].unit}
+      <div className="plane-controls" id={controlsId}>
+        {control}
       </div>
       <div
         className="plane"
         role="group"
         aria-label={`${name} plane`}
-        aria-describedby={captionId}
+        aria-describedby={controlsId}
         tabIndex={0}
         onPointerDown={(event) => {
           if (document.activeElement instanceof HTMLInputElement)

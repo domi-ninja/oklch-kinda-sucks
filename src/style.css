@@ -79,7 +79,7 @@ h2 {
   gap: 8px;
 }
 .picker {
-  padding: 0 16px;
+  padding: 16px 16px 0;
   overflow: clip;
 }
 .color-planes {
@@ -89,10 +89,6 @@ h2 {
 }
 .color-plane {
   min-width: 0;
-}
-.plane-caption {
-  margin-bottom: 8px;
-  overflow-wrap: anywhere;
 }
 .plane {
   position: relative;
@@ -605,7 +601,8 @@ select {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 16px 0;
+  padding: 8px 16px;
+  border-bottom: 1px solid #9d9d9d;
 }
 .picker-panel-heading select {
   width: 110px;

@@ -57,6 +57,48 @@ export function Picker({
       paint: (a: number) => cssColor({ ...color, a }),
     },
   ];
+  const sliders = dimensions.map(
+    ({ name, max, unit, step, value, change, paint }) => (
+      <div className="slider-row" key={name}>
+        <label htmlFor={`${id}-${name}`}>{name}</label>
+        <input
+          id={`${id}-${name}`}
+          aria-label={name}
+          type="range"
+          min="0"
+          max={100}
+          step={0.1}
+          value={(value / max) * 100}
+          style={{
+            backgroundImage: `linear-gradient(to right, ${Array.from({ length: 37 }, (_, i) => paint((i / 36) * max)).join(",")})`,
+          }}
+          onChange={(e) => change((Number(e.target.value) / 100) * max)}
+        />
+        <label className="number">
+          <NumericInput
+            aria-label={`${name} value`}
+            min={0}
+            max={max}
+            step={step}
+            value={round(value, 3)}
+            onValueChange={change}
+          />
+          <span>{unit}</span>
+        </label>
+        <label className="number">
+          <NumericInput
+            aria-label={`${name} percentage`}
+            min={0}
+            max={100}
+            step={0.1}
+            value={round((value / max) * 100, 3)}
+            onValueChange={(value) => change((value / 100) * max)}
+          />
+          <span>%</span>
+        </label>
+      </div>
+    ),
+  );
   return (
     <div className="picker">
       <div className="color-planes">
@@ -67,6 +109,7 @@ export function Picker({
             mode={mode}
             values={values}
             mapping={mapping}
+            control={sliders[mapping.fixed]}
             render={render}
             onChange={onChange}
             palette={
@@ -75,46 +118,7 @@ export function Picker({
           />
         ))}
       </div>
-      {dimensions.map(({ name, max, unit, step, value, change, paint }) => (
-        <div className="slider-row" key={name}>
-          <label htmlFor={`${id}-${name}`}>{name}</label>
-          <input
-            id={`${id}-${name}`}
-            aria-label={name}
-            type="range"
-            min="0"
-            max={100}
-            step={0.1}
-            value={(value / max) * 100}
-            style={{
-              backgroundImage: `linear-gradient(to right, ${Array.from({ length: 37 }, (_, i) => paint((i / 36) * max)).join(",")})`,
-            }}
-            onChange={(e) => change((Number(e.target.value) / 100) * max)}
-          />
-          <label className="number">
-            <NumericInput
-              aria-label={`${name} value`}
-              min={0}
-              max={max}
-              step={step}
-              value={round(value, 3)}
-              onValueChange={change}
-            />
-            <span>{unit}</span>
-          </label>
-          <label className="number">
-            <NumericInput
-              aria-label={`${name} percentage`}
-              min={0}
-              max={100}
-              step={0.1}
-              value={round((value / max) * 100, 3)}
-              onValueChange={(value) => change((value / 100) * max)}
-            />
-            <span>%</span>
-          </label>
-        </div>
-      ))}
+      {sliders[config.length]}
       <div className="picker-expression">
         {coordinateCss(
           [round(values[0], 3), round(values[1], 3), round(values[2], 3)],
