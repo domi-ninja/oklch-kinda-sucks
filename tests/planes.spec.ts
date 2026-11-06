@@ -31,12 +31,15 @@ test("all three channel pairings render the browser's color at their held coordi
           plane.locator("canvas").evaluate((element, css) => {
             if (!(element instanceof HTMLCanvasElement))
               throw new Error("Expected canvas");
-            const actual = element
-              .getContext("2d")!
-              .getImageData(64, 96, 1, 1).data;
+            const context = element.getContext("2d", {
+              colorSpace: "display-p3",
+            })!;
+            const actual = context.getImageData(64, 96, 1, 1).data;
             const reference = document
               .createElement("canvas")
-              .getContext("2d", { colorSpace: "srgb" })!;
+              .getContext("2d", {
+                colorSpace: context.getContextAttributes().colorSpace,
+              })!;
             reference.fillStyle = css;
             reference.fillRect(0, 0, 1, 1);
             const expected = reference.getImageData(0, 0, 1, 1).data;

@@ -7,20 +7,26 @@ import {
   parsePickerExpression,
   pickerExpression,
 } from "./pickerModes";
+import { colorGamut, parseDisplayP3 } from "./colorGamut";
 
 function ColorField({
-  color,
-  mode,
-  percent,
+  expression,
+  name,
+  label,
+  percent = false,
+  parse,
+  applyLabel,
   onChange,
 }: {
-  color: Color;
-  mode: PickerMode;
-  percent: boolean;
+  expression: string;
+  name: string;
+  label: string;
+  percent?: boolean;
+  parse: (text: string) => Color | null;
+  applyLabel: string;
   onChange: (color: Color) => void;
 }) {
   const id = useId();
-  const expression = pickerExpression(color, mode, percent);
   const [draft, setDraft] = useState<{
     source: string;
     value: string;
@@ -30,12 +36,11 @@ function ColorField({
   const value = currentDraft?.value ?? expression;
   const error = currentDraft?.error;
   if (draft && !currentDraft) setDraft(null);
-  const name = cssFunctions[mode].toUpperCase();
   return (
     <form
       onSubmit={(event) => {
         event.preventDefault();
-        const parsed = parsePickerExpression(value, mode, percent);
+        const parsed = parse(value);
         if (!parsed) {
           setDraft({
             source: expression,
@@ -49,13 +54,8 @@ function ColorField({
       }}
     >
       <div className="color-field-heading">
-        <label htmlFor={id}>
-          {percent ? "Editor %" : mode === "RGB" ? "Hex" : "CSS"}
-        </label>
-        <button
-          aria-label={percent ? "Apply percentage color" : "Apply color"}
-          type="submit"
-        >
+        <label htmlFor={id}>{label}</label>
+        <button aria-label={applyLabel} type="submit">
           <Check size={16} />
         </button>
       </div>
@@ -95,10 +95,43 @@ export function ColorEditors(props: {
   mode: PickerMode;
   onChange: (color: Color) => void;
 }) {
+  const { color, mode, onChange } = props;
+  const gamut = colorGamut(color);
   return (
     <div className="color-editors">
-      <ColorField {...props} percent={false} />
-      <ColorField {...props} percent />
+      {[false, true].map((percent) => (
+        <ColorField
+          key={String(percent)}
+          expression={pickerExpression(color, mode, percent)}
+          name={cssFunctions[mode].toUpperCase()}
+          label={percent ? "Editor %" : mode === "RGB" ? "Hex · sRGB" : "CSS"}
+          percent={percent}
+          parse={(text) => parsePickerExpression(text, mode, percent)}
+          applyLabel={percent ? "Apply percentage color" : "Apply color"}
+          onChange={onChange}
+        />
+      ))}
+      <ColorField
+        expression={gamut.p3Css}
+        name="Display P3"
+        label="Display P3"
+        parse={parseDisplayP3}
+        applyLabel="Apply Display P3 color"
+        onChange={onChange}
+      />
+      <div className="color-gamut">
+        <output aria-label="Color gamut">
+          {gamut.srgb
+            ? "Within sRGB"
+            : gamut.p3
+              ? "Outside sRGB · within Display P3"
+              : "Outside Display P3"}
+        </output>
+        <span>sRGB channels · unclipped</span>
+        <output aria-label="Unclipped sRGB channels">
+          {gamut.srgbChannels.join(" ")}
+        </output>
+      </div>
     </div>
   );
 }

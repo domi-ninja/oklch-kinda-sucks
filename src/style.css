@@ -385,6 +385,12 @@ input[type="range"]::-moz-range-thumb {
 .color-editors form {
   min-width: 0;
 }
+.color-gamut {
+  display: grid;
+  gap: 8px;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
 .color-field-heading {
   display: flex;
   align-items: center;

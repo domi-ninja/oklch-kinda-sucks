@@ -127,9 +127,13 @@ test("plane rendering catches up to the latest hue after rapid changes", async (
         .evaluate((canvas) => {
           if (!(canvas instanceof HTMLCanvasElement))
             throw new Error("Expected canvas");
-          const context = canvas.getContext("2d")!;
+          const context = canvas.getContext("2d", {
+            colorSpace: "display-p3",
+          })!;
           const actual = [...context.getImageData(128, 80, 1, 1).data];
-          const reference = document.createElement("canvas").getContext("2d")!;
+          const reference = document.createElement("canvas").getContext("2d", {
+            colorSpace: context.getContextAttributes().colorSpace,
+          })!;
           reference.fillStyle = `oklch(${1 - 80 / 159} ${(128 / 255) * 0.4} 288)`;
           reference.fillRect(0, 0, 1, 1);
           return actual.every(

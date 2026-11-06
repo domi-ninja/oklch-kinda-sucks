@@ -33,7 +33,7 @@ export function usePlaneRenderer() {
             (!next || next.request.mode === job.request.mode)
           )
             job.canvas
-              .getContext("2d", { colorSpace: "srgb" })
+              .getContext("2d", { colorSpace: "display-p3" })
               ?.drawImage(event.data, 0, 0);
         }
         event.data.close();

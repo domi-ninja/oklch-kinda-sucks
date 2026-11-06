@@ -28,6 +28,7 @@ test("discard restores built-in and saved custom presets, the selected picker, a
   await picker.fill("oklch(0.6 0.1 230)");
   await page.getByRole("button", { name: "Apply color", exact: true }).click();
   await expect(preview).toHaveCSS("background-color", "oklch(0.6 0.1 230)");
+  await page.locator(".preset-actions").scrollIntoViewIfNeeded();
   await expect(page.locator(".preset-actions")).toBeInViewport();
   expect(
     await page

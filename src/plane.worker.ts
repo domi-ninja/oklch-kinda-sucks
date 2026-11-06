@@ -2,7 +2,8 @@ import { channels, coordinateCss, type Coordinates } from "./pickerModes";
 import type { PlaneRequest } from "./planes";
 
 const canvas = new OffscreenCanvas(256, 160);
-const context = canvas.getContext("2d", { colorSpace: "srgb" })!;
+// P3 backing stores retain colors beyond sRGB even on partial-gamut displays.
+const context = canvas.getContext("2d", { colorSpace: "display-p3" })!;
 
 self.onmessage = (event: MessageEvent<PlaneRequest>) => {
   const { mode, mapping, fixedValue } = event.data;

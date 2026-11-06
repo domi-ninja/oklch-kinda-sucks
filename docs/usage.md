@@ -10,6 +10,8 @@ Add picker opens another synchronized RGB, HSL, HCL, or OKHCL picker. Each has t
 
 RGB's color editor accepts hex. The other editors accept their color space's CSS syntax. Editor % sits below the CSS field. Sliders show native values and percentages together. Native and percentage inputs accept typing before clamping a completed value.
 
+Every picker also accepts `color(display-p3 ...)` in its Display P3 field. The gamut status describes the selected source color, not the monitor's coverage. Unclipped sRGB channels use a 0–255 scale and can be negative or exceed 255 for colors outside sRGB. Switching picker modes preserves the source color; editing RGB or HSL uses sRGB.
+
 RGB 100% means 255. HCL chroma 100% means 150, OKHCL chroma 100% means 0.4, and hue 100% means 360 degrees. Percentage hue is editor notation; CSS hue uses degrees.
 
 Display color uses the native CSS color. sRGB preview shows an 8-bit sRGB canvas readback. Hover or focus either swatch for details. Wide-gamut displays may show a difference. Rendering and gamut mapping depend on the browser. Transparent pixels are quantized and can lose RGB precision during canvas readback.
