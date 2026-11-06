@@ -224,6 +224,13 @@ h2 {
   position: absolute;
   pointer-events: none;
 }
+.palette-scale-scroll {
+  overflow-x: auto;
+}
+.palette-scale-content {
+  display: grid;
+  gap: 4px;
+}
 .palette-strip {
   display: grid;
   overflow: hidden;
@@ -231,7 +238,18 @@ h2 {
   border-radius: 4px;
 }
 .palette-strip li {
+  position: relative;
   min-width: 0;
+}
+.palette-hex {
+  position: absolute;
+  left: 2px;
+  bottom: 2px;
+  padding: 0 2px;
+  border-radius: 2px;
+  color: #202020;
+  background: #fffe;
+  white-space: nowrap;
 }
 .palette-strip li > span {
   display: block;

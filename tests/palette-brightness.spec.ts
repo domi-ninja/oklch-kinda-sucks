@@ -1,7 +1,7 @@
 import { test, expect, type Page, type Locator } from "@playwright/test";
 
 async function pixels(page: Page, strip: Locator) {
-  const png = await strip.screenshot();
+  const png = await strip.screenshot({ scale: "css" });
   return page.evaluate(
     async (bytes) => {
       const bitmap = await createImageBitmap(
@@ -52,21 +52,54 @@ async function checkScale(page: Page, count: number) {
     }),
   );
   expect(lowerCells).toEqual(upperCells);
-  const [upper, lower] = await Promise.all([
-    pixels(page, colors),
-    pixels(page, brightness),
-  ]);
-  const read = (image: typeof upper, x: number, y: number) =>
-    image.data.slice((y * image.width + x) * 4, (y * image.width + x) * 4 + 3);
-  for (let index = 0; index < count; index++) {
-    const x = Math.floor(1 + ((index + 0.5) * (upper.width - 2)) / count);
-    for (const y of [4, 12]) {
-      const rgb = read(upper, x, y);
-      const gray = read(lower, x, y);
-      expect(Math.max(...gray) - Math.min(...gray)).toBeLessThanOrEqual(1);
-      expect(Math.abs(luminance(gray) - luminance(rgb))).toBeLessThan(0.012);
+  const scroll = page.locator(".palette-scale-scroll");
+  const checked = new Set<number>();
+  const dimensions = await scroll.evaluate((element) => ({
+    width: element.clientWidth,
+    total: element.scrollWidth,
+  }));
+  for (let left = 0; left < dimensions.total; left += dimensions.width * 0.7) {
+    await scroll.evaluate((element, left) => {
+      element.scrollLeft = left;
+    }, left);
+    const image = await pixels(page, scroll);
+    const positions = await scroll.evaluate((element) => {
+      const bounds = element.getBoundingClientRect();
+      return {
+        colors: [
+          ...element.querySelectorAll(".palette-strip:first-child li"),
+        ].map((cell) => {
+          const rect = cell.getBoundingClientRect();
+          return {
+            x: rect.x + rect.width / 2 - bounds.x,
+            y: rect.y - bounds.y,
+          };
+        }),
+        grayY:
+          element
+            .querySelector(".palette-brightness li")!
+            .getBoundingClientRect().y - bounds.y,
+        end: element.scrollLeft + element.clientWidth >= element.scrollWidth,
+      };
+    });
+    const read = (x: number, y: number) =>
+      image.data.slice(
+        (Math.floor(y) * image.width + Math.floor(x)) * 4,
+        (Math.floor(y) * image.width + Math.floor(x)) * 4 + 3,
+      );
+    for (const [index, point] of positions.colors.entries()) {
+      if (point.x < 2 || point.x > image.width - 2) continue;
+      checked.add(index);
+      for (const offset of [4, 12]) {
+        const rgb = read(point.x, point.y + offset);
+        const gray = read(point.x, positions.grayY + offset);
+        expect(Math.max(...gray) - Math.min(...gray)).toBeLessThanOrEqual(1);
+        expect(Math.abs(luminance(gray) - luminance(rgb))).toBeLessThan(0.012);
+      }
     }
+    if (positions.end) break;
   }
+  expect(checked.size).toBe(count);
 }
 
 test("brightness tracks rendered palette colors, alpha and mobile columns", async ({
@@ -86,11 +119,18 @@ test("brightness tracks rendered palette colors, alpha and mobile columns", asyn
     .getByLabel("Palette interpolation", { exact: true })
     .selectOption("RGB");
   await checkScale(page, 5);
+  const hex = page
+    .getByRole("list", { name: "Palette colors", exact: true })
+    .locator(".palette-hex");
+  await expect(hex).toHaveCount(5);
+  await expect(hex.first()).toHaveText("#ff0000");
+  await expect(hex.last()).toHaveText("#0000ff");
   await page
     .getByLabel("Palette interpolation", { exact: true })
     .selectOption("OKHCL");
   await page.getByLabel("RGB value", { exact: true }).fill("#00ff0080");
   await page.getByRole("button", { name: "Apply color", exact: true }).click();
+  await expect(hex.last()).toHaveText(/^#[\da-f]{6}80$/);
   await checkScale(page, 5);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByLabel("Palette subdivisions", { exact: true }).fill("8");

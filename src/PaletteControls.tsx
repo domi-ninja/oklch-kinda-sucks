@@ -1,8 +1,8 @@
-import { useId } from "react";
+import { useId, useMemo } from "react";
 import { Copy } from "lucide-react";
 import { Button } from "./components/ui/button";
 import { NumericInput } from "./NumericInput";
-import { cssColor, type Color } from "./color";
+import { cssColor, sampleColor, type Color } from "./color";
 import { paletteLabels } from "./palette";
 import {
   pickerModes,
@@ -31,6 +31,10 @@ export function PaletteControls({
   onCopy: () => void;
 }) {
   const brightnessFilter = useId();
+  const hexColors = useMemo(
+    () => colors.map((color) => sampleColor(cssColor(color)).hex),
+    [colors],
+  );
   return (
     <section className="panel palette-panel" aria-label="Palette">
       <div className="panel-heading">
@@ -131,34 +135,51 @@ export function PaletteControls({
               </filter>
             </defs>
           </svg>
-          {[false, true].map((brightness) => (
-            <ol
-              key={String(brightness)}
-              className={`palette-strip${brightness ? " palette-brightness" : ""}`}
-              aria-label={
-                brightness ? "Perceived brightness" : "Palette colors"
-              }
-              style={{
-                gridTemplateColumns: `repeat(${colors.length}, minmax(0, 1fr))`,
-                filter: brightness ? `url(#${brightnessFilter})` : undefined,
-              }}
+          <div className="palette-scale-scroll">
+            <div
+              className="palette-scale-content"
+              style={{ minWidth: colors.length * 88 }}
             >
-              {colors.map((color, index) => (
-                <li
-                  key={index}
-                  className="checker"
+              {[false, true].map((brightness) => (
+                <ol
+                  key={String(brightness)}
+                  className={`palette-strip${brightness ? " palette-brightness" : ""}`}
                   aria-label={
-                    brightness
-                      ? `Brightness of color ${index + 1}`
-                      : `Color ${index + 1}: ${cssColor(color)}`
+                    brightness ? "Perceived brightness" : "Palette colors"
                   }
-                  title={cssColor(color)}
+                  style={{
+                    gridTemplateColumns: `repeat(${colors.length}, minmax(0, 1fr))`,
+                    filter: brightness
+                      ? `url(#${brightnessFilter})`
+                      : undefined,
+                  }}
                 >
-                  <span style={{ background: cssColor(color) }} />
-                </li>
+                  {colors.map((color, index) => (
+                    <li
+                      key={index}
+                      className="checker"
+                      aria-label={
+                        brightness
+                          ? `Brightness of color ${index + 1}`
+                          : `Color ${index + 1}: ${cssColor(color)}`
+                      }
+                      title={cssColor(color)}
+                    >
+                      <span style={{ background: cssColor(color) }} />
+                      {!brightness && (
+                        <code
+                          className="palette-hex"
+                          title={`sRGB ${hexColors[index]}`}
+                        >
+                          {hexColors[index]}
+                        </code>
+                      )}
+                    </li>
+                  ))}
+                </ol>
               ))}
-            </ol>
-          ))}
+            </div>
+          </div>
           <span>Perceived brightness · sRGB</span>
         </div>
         <div className="palette-actions">
