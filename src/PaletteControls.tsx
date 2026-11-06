@@ -37,15 +37,17 @@ export function PaletteControls({
   );
   const brightnessReference = useMemo(() => {
     // Composite endpoints before interpolating linear-light RGB so alpha also matches each checker shade.
-    const gradient = (background: string) => {
+    const steps = (background: string) => {
       const from = sampleColor(cssColor(start), background).rgb;
       const to = sampleColor(cssColor(palette.end), background).rgb;
-      const inset = 50 / colors.length;
-      return `linear-gradient(to right in srgb-linear, ${from} ${inset}%, ${to} ${100 - inset}%)`;
+      return colors.map(
+        (_, index) =>
+          `color-mix(in srgb-linear, ${from}, ${to} ${(index / (colors.length - 1)) * 100}%)`,
+      );
     };
     return {
-      light: gradient(checkerColors.light),
-      dark: gradient(checkerColors.dark),
+      light: steps(checkerColors.light),
+      dark: steps(checkerColors.dark),
     };
   }, [start, palette.end, colors.length]);
   return (
@@ -204,13 +206,22 @@ export function PaletteControls({
                 role="img"
                 aria-label="Linear Start to End brightness"
                 title="Linear Start to End brightness"
-                style={{ filter: `url(#${brightnessFilter})` }}
+                style={{
+                  filter: `url(#${brightnessFilter})`,
+                  gridTemplateColumns: `repeat(${colors.length}, minmax(0, 1fr))`,
+                }}
               >
-                <span style={{ backgroundImage: brightnessReference.light }} />
-                <span
-                  className="palette-reference-dark"
-                  style={{ backgroundImage: brightnessReference.dark }}
-                />
+                {brightnessReference.light.map((light, index) => (
+                  <span className="palette-reference-step" key={index}>
+                    <span style={{ backgroundColor: light }} />
+                    <span
+                      className="palette-reference-dark"
+                      style={{
+                        backgroundColor: brightnessReference.dark[index],
+                      }}
+                    />
+                  </span>
+                ))}
               </div>
             </div>
           </div>

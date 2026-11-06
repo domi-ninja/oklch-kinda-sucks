@@ -259,10 +259,13 @@ h2 {
   height: 22px;
 }
 .palette-brightness-reference {
-  position: relative;
   height: 24px;
 }
-.palette-brightness-reference > span {
+.palette-reference-step {
+  position: relative;
+  min-width: 0;
+}
+.palette-reference-step > span {
   position: absolute;
   inset: 0;
 }

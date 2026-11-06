@@ -40,7 +40,7 @@ Intermediate markers show the generated steps and cannot be edited. Copy palette
 
 The grayscale strip below the palette matches each color's relative luminance on a standard sRGB display, including its transparency over the checkerboard. It uses linear-light luminance, not an RGB average or the picker's lightness channel. Actual perceived brightness varies with the display, viewing conditions, and observer.
 
-The strip immediately below it shows a linear Start-to-End brightness reference. It ignores the middle color and interpolation mode while matching the endpoints and transparency.
+The strip immediately below it shows a linear Start-to-End brightness reference with the same number of steps as the palette. It ignores the middle color and interpolation mode while matching the endpoints and transparency.
 
 ### Harmonizer
 

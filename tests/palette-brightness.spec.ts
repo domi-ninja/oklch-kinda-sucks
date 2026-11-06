@@ -52,6 +52,16 @@ async function checkScale(page: Page, count: number) {
     }),
   );
   expect(lowerCells).toEqual(upperCells);
+  const referenceSteps = page.locator(".palette-reference-step");
+  await expect(referenceSteps).toHaveCount(count);
+  expect(
+    await referenceSteps.evaluateAll((cells) =>
+      cells.map((cell) => {
+        const rect = cell.getBoundingClientRect();
+        return { x: rect.x, width: rect.width };
+      }),
+    ),
+  ).toEqual(upperCells);
   const scroll = page.locator(".palette-scale-scroll");
   const checked = new Set<number>();
   const dimensions = await scroll.evaluate((element) => ({
