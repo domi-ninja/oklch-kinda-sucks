@@ -40,6 +40,8 @@ Intermediate markers show the generated steps and cannot be edited. Copy palette
 
 The grayscale strip below the palette matches each color's relative luminance on a standard sRGB display, including its transparency over the checkerboard. It uses linear-light luminance, not an RGB average or the picker's lightness channel. Actual perceived brightness varies with the display, viewing conditions, and observer.
 
+The strip immediately below it shows a linear Start-to-End brightness reference. It ignores the middle color and interpolation mode while matching the endpoints and transparency.
+
 ### Harmonizer
 
 Open Harmonizer above the pickers for a hue-by-contrast grid. Use selects a row and sets the palette's Start and End to its first and last colors. Moving a row's Hue slider selects that row and updates both endpoints. An existing palette keeps its interpolation mode, subdivisions, and optional middle control; the middle control takes the new hue.

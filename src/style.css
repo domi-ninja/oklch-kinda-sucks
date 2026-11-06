@@ -258,6 +258,23 @@ h2 {
 .palette-brightness li > span {
   height: 22px;
 }
+.palette-brightness-reference {
+  position: relative;
+  height: 24px;
+}
+.palette-brightness-reference > span {
+  position: absolute;
+  inset: 0;
+}
+.palette-reference-dark {
+  mask-image: conic-gradient(
+    #000 25%,
+    transparent 0 50%,
+    #000 0 75%,
+    transparent 0
+  );
+  mask-size: 12px 12px;
+}
 .palette-actions > span {
   flex: 1;
 }
@@ -325,10 +342,10 @@ input[type="range"]::-moz-range-thumb {
 }
 .checker {
   background-image: conic-gradient(
-    #a6a6a6 25%,
-    #bfbfbf 0 50%,
-    #a6a6a6 0 75%,
-    #bfbfbf 0
+    var(--checker-dark, #a6a6a6) 25%,
+    var(--checker-light, #bfbfbf) 0 50%,
+    var(--checker-dark, #a6a6a6) 0 75%,
+    var(--checker-light, #bfbfbf) 0
   );
   background-size: 12px 12px;
 }

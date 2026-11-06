@@ -136,3 +136,69 @@ test("brightness tracks rendered palette colors, alpha and mobile columns", asyn
   await page.getByLabel("Palette subdivisions", { exact: true }).fill("8");
   await checkScale(page, 9);
 });
+
+test("linear brightness reference ignores the middle control and matches endpoint brightness", async ({
+  page,
+}) => {
+  await page.goto("/#color=0.6,0.1,180,1&pickers=RGB");
+  const apply = page.getByRole("button", { name: "Apply color", exact: true });
+  const editor = page.getByLabel("RGB value", { exact: true });
+  await editor.fill("#ff0000");
+  await apply.click();
+  await page
+    .getByRole("button", { name: "Create palette", exact: true })
+    .click();
+  await page.getByRole("button", { name: "End", exact: true }).click();
+  await editor.fill("#0000ff");
+  await apply.click();
+  await page.getByLabel("Palette subdivisions", { exact: true }).fill("2");
+  const reference = page.getByRole("img", {
+    name: "Linear Start to End brightness",
+    exact: true,
+  });
+  const actual = page.getByRole("list", {
+    name: "Perceived brightness",
+    exact: true,
+  });
+  await expect(reference).toBeVisible();
+  const original = await pixels(page, reference);
+  await page
+    .getByRole("button", { name: "Add middle color", exact: true })
+    .click();
+  await editor.fill("#ffffff");
+  await apply.click();
+  const bent = await pixels(page, actual);
+  const unchanged = await pixels(page, reference);
+  expect(
+    unchanged.data.every(
+      (value, index) => Math.abs(value - original.data[index]) <= 1,
+    ),
+  ).toBe(true);
+  const at = (image: typeof original, index: number, y = 4) => {
+    const x = Math.floor(1 + ((index + 0.5) * (image.width - 2)) / 3);
+    return image.data.slice(
+      (y * image.width + x) * 4,
+      (y * image.width + x) * 4 + 3,
+    );
+  };
+  const levels = [0, 1, 2].map((index) => luminance(at(unchanged, index)));
+  expect(Math.abs(levels[1] - (levels[0] + levels[2]) / 2)).toBeLessThan(0.01);
+  expect(luminance(at(bent, 1))).toBeGreaterThan(levels[1] + 0.15);
+  for (const index of [0, 2])
+    expect(Math.abs(luminance(at(bent, index)) - levels[index])).toBeLessThan(
+      0.01,
+    );
+  await page.getByRole("button", { name: "End", exact: true }).click();
+  await editor.fill("#00ff0080");
+  await apply.click();
+  const translucent = await pixels(page, actual);
+  const translucentReference = await pixels(page, reference);
+  for (const index of [0, 2])
+    for (const y of [4, 12])
+      expect(
+        Math.abs(
+          luminance(at(translucent, index, y)) -
+            luminance(at(translucentReference, index, y)),
+        ),
+      ).toBeLessThan(0.01);
+});

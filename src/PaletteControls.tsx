@@ -1,8 +1,8 @@
-import { useId, useMemo } from "react";
+import { useId, useMemo, type CSSProperties } from "react";
 import { Copy } from "lucide-react";
 import { Button } from "./components/ui/button";
 import { NumericInput } from "./NumericInput";
-import { cssColor, sampleColor, type Color } from "./color";
+import { checkerColors, cssColor, sampleColor, type Color } from "./color";
 import { paletteLabels } from "./palette";
 import {
   pickerModes,
@@ -35,6 +35,19 @@ export function PaletteControls({
     () => colors.map((color) => sampleColor(cssColor(color)).hex),
     [colors],
   );
+  const brightnessReference = useMemo(() => {
+    // Composite endpoints before interpolating linear-light RGB so alpha also matches each checker shade.
+    const gradient = (background: string) => {
+      const from = sampleColor(cssColor(start), background).rgb;
+      const to = sampleColor(cssColor(palette.end), background).rgb;
+      const inset = 50 / colors.length;
+      return `linear-gradient(to right in srgb-linear, ${from} ${inset}%, ${to} ${100 - inset}%)`;
+    };
+    return {
+      light: gradient(checkerColors.light),
+      dark: gradient(checkerColors.dark),
+    };
+  }, [start, palette.end, colors.length]);
   return (
     <section className="panel palette-panel" aria-label="Palette">
       <div className="panel-heading">
@@ -108,7 +121,15 @@ export function PaletteControls({
             </select>
           </label>
         </div>
-        <div className="palette-scales">
+        <div
+          className="palette-scales"
+          style={
+            {
+              "--checker-dark": checkerColors.dark,
+              "--checker-light": checkerColors.light,
+            } as CSSProperties
+          }
+        >
           <svg
             width="0"
             height="0"
@@ -178,9 +199,22 @@ export function PaletteControls({
                   ))}
                 </ol>
               ))}
+              <div
+                className="palette-strip palette-brightness-reference"
+                role="img"
+                aria-label="Linear Start to End brightness"
+                title="Linear Start to End brightness"
+                style={{ filter: `url(#${brightnessFilter})` }}
+              >
+                <span style={{ backgroundImage: brightnessReference.light }} />
+                <span
+                  className="palette-reference-dark"
+                  style={{ backgroundImage: brightnessReference.dark }}
+                />
+              </div>
             </div>
           </div>
-          <span>Perceived brightness · sRGB</span>
+          <span>Brightness / Linear reference · sRGB</span>
         </div>
         <div className="palette-actions">
           <span>{colors.length} colors</span>

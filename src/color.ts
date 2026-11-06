@@ -31,7 +31,8 @@ export function parseColor(text: string): Color | null {
     : null;
 }
 let sampleContext: CanvasRenderingContext2D | null = null;
-export function sampleColor(color: string) {
+export const checkerColors = { dark: "#a6a6a6", light: "#bfbfbf" };
+export function sampleColor(color: string, background?: string) {
   if (!sampleContext) {
     const canvas = document.createElement("canvas");
     canvas.width = canvas.height = 1;
@@ -49,6 +50,11 @@ export function sampleColor(color: string) {
   ctx.fillStyle = color;
   if (ctx.fillStyle !== parsed) throw new Error("Invalid CSS color");
   ctx.clearRect(0, 0, 1, 1);
+  if (background) {
+    ctx.fillStyle = background;
+    ctx.fillRect(0, 0, 1, 1);
+    ctx.fillStyle = color;
+  }
   ctx.fillRect(0, 0, 1, 1);
   const [r, g, b, a] = ctx.getImageData(0, 0, 1, 1).data;
   return {
