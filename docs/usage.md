@@ -14,6 +14,14 @@ RGB 100% means 255. HCL chroma 100% means 150, OKHCL chroma 100% means 0.4, and 
 
 Display color uses the native CSS color. sRGB preview shows an 8-bit sRGB canvas readback. Hover or focus either swatch for details. Wide-gamut displays may show a difference. Rendering and gamut mapping depend on the browser. Transparent pixels are quantized and can lose RGB precision during canvas readback.
 
+## Undo and redo
+
+Use Undo and Redo above the pickers, or Ctrl+Z to undo and Ctrl+Y or Ctrl+Shift+Z to redo. Cmd+Z and Cmd+Shift+Z work on macOS. Text fields keep their normal text undo while focused. The shortcuts also work from preview buttons.
+
+History covers colors, palette settings, presets, generated modes, generator settings, and picker layout. A drag or continuous field edit is one step. Selecting a token or endpoint and switching preview tabs or widths do not add steps. Undo keeps the current preview tab and width.
+
+The last 100 steps stay in memory until reload. Undoing saved preset changes updates browser storage too. A new edit clears redo.
+
 ## Presets and sharing
 
 Built-in presets are protected. Save as new creates an editable copy. Save updates a custom preset, and Discard changes restores its saved stylesheet and the selected picker color. Browser storage keeps saved presets and unfinished work across reloads.

@@ -17,9 +17,7 @@ export function ModeGenerator({
   onApply: (source: string) => void;
 }) {
   const id = useId();
-  const [undo, setUndo] = useState<{ before: string; after: string } | null>(
-    null,
-  );
+  const [generatedSource, setGeneratedSource] = useState<string | null>(null);
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
   const target = settings.from === "light" ? "dark" : "light";
@@ -36,7 +34,7 @@ export function ModeGenerator({
         event.preventDefault();
         try {
           const result = generateMode(source, settings);
-          setUndo({ before: source, after: result.source });
+          setGeneratedSource(result.source);
           onApply(result.source);
           setError("");
           setStatus(
@@ -101,27 +99,13 @@ export function ModeGenerator({
       ))}
       <div className="mode-actions">
         <Button type="submit">Generate {target} mode</Button>
-        <Button
-          type="button"
-          variant="outline"
-          disabled={!undo || undo.after !== source}
-          onClick={() => {
-            if (!undo || undo.after !== source) return;
-            onApply(undo.before);
-            setUndo(null);
-            setStatus("");
-            setError("");
-          }}
-        >
-          Undo
-        </Button>
       </div>
       {error && (
         <span role="alert" className="error">
           {error}
         </span>
       )}
-      {status && !error && undo?.after === source && (
+      {status && !error && generatedSource === source && (
         <span role="status">{status}</span>
       )}
     </form>

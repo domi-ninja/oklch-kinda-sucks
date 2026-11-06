@@ -169,6 +169,33 @@
   });
   window.addEventListener("scroll", schedule, true);
   window.addEventListener("resize", schedule);
+  document.addEventListener("keydown", (event) => {
+    if (
+      event.defaultPrevented ||
+      !(event.ctrlKey || event.metaKey) ||
+      event.altKey
+    )
+      return;
+    if (
+      event.target instanceof Element &&
+      event.target.closest(
+        'textarea,input:not([type="range"]):not([type="checkbox"]):not([type="radio"]),[contenteditable]:not([contenteditable="false"])',
+      )
+    )
+      return;
+    const key = event.key.toLowerCase();
+    const action =
+      key === "z"
+        ? event.shiftKey
+          ? "redo"
+          : "undo"
+        : key === "y" && !event.shiftKey
+          ? "redo"
+          : null;
+    if (!action) return;
+    event.preventDefault();
+    parent.postMessage({ type: "preview-history", action }, "*");
+  });
   window.addEventListener("message", (event) => {
     if (
       event.source !== parent ||

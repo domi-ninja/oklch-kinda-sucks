@@ -19,6 +19,8 @@ Preset links do not include the current picker color, picker layout, selected to
 
 The browser saves the workspace under `oklch-workspace` and saved presets under `oklch-presets`. This includes drafts, selected preset and token, picker configuration, palette settings, generator controls, preview width, and tab. Ordinary editing, saving, discarding, and color URL navigation do not write to the backend.
 
+Undo and redo history stays in memory until reload. It is excluded from browser storage, color URLs, and preset links. Restoring a saved preset through undo or redo updates the ordinary browser storage.
+
 Opening a preset link imports its name and stylesheet as a local preset and selects it. An identical local preset is reused. Existing saved presets are never overwritten by an import. The recipient keeps their current color, picker configuration, palette, generator controls, preview width, and tab. The selected token is cleared to avoid binding it to an unrelated declaration.
 
 After import, the address becomes the normal color URL. The imported preset remains in browser storage. Use Share preset to create another preset link; copying the address shares the current color.

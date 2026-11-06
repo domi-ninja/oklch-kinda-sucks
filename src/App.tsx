@@ -9,6 +9,8 @@ import {
   X,
   Link,
   LoaderCircle,
+  Undo2,
+  Redo2,
 } from "lucide-react";
 import { Button } from "./components/ui/button";
 import { Picker } from "./Picker";
@@ -106,10 +108,8 @@ type PresetShareResult = { active: string; name: string; source: string } & (
   | { status: "error"; message: string }
 );
 export function App({ shared }: { shared?: PresetShare }) {
-  const { state, set, setColor, updateState } = useWorkspace(
-    initialWorkspace,
-    shared,
-  );
+  const { state, set, setColor, updateState, undo, redo, canUndo, canRedo } =
+    useWorkspace(initialWorkspace, shared);
   const {
     saved,
     active,
@@ -343,6 +343,32 @@ export function App({ shared }: { shared?: PresetShare }) {
           )}
           <div className="picker-toolbar">
             {message && <span role="status">{message}</span>}
+            <div
+              className="history-controls"
+              role="group"
+              aria-label="Edit history"
+            >
+              <Button
+                variant="outline"
+                onClick={undo}
+                disabled={!canUndo}
+                aria-keyshortcuts="Control+Z Meta+Z"
+                title="Undo (Ctrl/Cmd+Z)"
+              >
+                <Undo2 size={15} />
+                Undo
+              </Button>
+              <Button
+                variant="outline"
+                onClick={redo}
+                disabled={!canRedo}
+                aria-keyshortcuts="Control+Y Control+Shift+Z Meta+Shift+Z"
+                title="Redo (Ctrl+Y or Ctrl/Cmd+Shift+Z)"
+              >
+                <Redo2 size={15} />
+                Redo
+              </Button>
+            </div>
             <Button
               variant="outline"
               onClick={() =>
@@ -611,7 +637,7 @@ export function App({ shared }: { shared?: PresetShare }) {
                           return;
                         }
                         set("selected", i);
-                        setColor(next);
+                        setColor(next, false);
                       }}
                     >
                       <span className="token-swatch checker">

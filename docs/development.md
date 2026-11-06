@@ -14,6 +14,7 @@ The development command starts Vite on port 5173 and the share API on port 5174.
 ## Code layout
 
 - `src/App.tsx` owns the editor UI, preset actions, and downloads.
+- `src/workspaceHistory.ts` stores up to 100 undo steps in memory. `src/useWorkspaceHistory.ts` groups pointer, keyboard, and field edits and binds shortcuts, including messages from sandboxed previews. Workspace setters batch related changes into one step.
 - `src/workspace.ts` handles browser persistence, color URLs, and preset imports. `src/workspaceSchema.ts` validates workspace and share data.
 - `src/sharing.ts` calls the share API. Read [Sharing and storage](sharing.md) before changing payloads or URL behavior.
 - Picker planes render in workers. The demo stylesheet compiles in a separate Tailwind worker. Sandboxed light and dark iframes receive CSS updates in place, preserving their scroll positions and form state. `previewBridge.js` reports hovered or focused elements and their theme tokens; `PreviewConnections.tsx` draws the links without rerendering the editor.

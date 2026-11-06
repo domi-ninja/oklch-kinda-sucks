@@ -353,7 +353,7 @@ test("mode UI generates both directions, preserves the source preview, and undoe
   await expect(
     dark.getByRole("button", { name: "Open project", exact: true }),
   ).toHaveCSS("background-color", "oklch(0.488 0.16 165)");
-  await form.getByRole("button", { name: "Undo", exact: true }).click();
+  await page.getByRole("button", { name: "Undo", exact: true }).click();
   await expect(dark.locator("main")).toHaveCSS(
     "background-color",
     "oklch(0.18 0.008 260)",
@@ -376,7 +376,7 @@ test("mode UI generates both directions, preserves the source preview, and undoe
   await expect(
     dark.getByRole("button", { name: "Open project", exact: true }),
   ).toHaveCSS("background-color", "oklch(0.65 0.16 165)");
-  await form.getByRole("button", { name: "Undo", exact: true }).click();
+  await page.getByRole("button", { name: "Undo", exact: true }).click();
   await expect(light.locator("main")).toHaveCSS(
     "background-color",
     "oklch(0.985 0.002 180)",

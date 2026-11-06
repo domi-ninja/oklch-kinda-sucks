@@ -1,4 +1,6 @@
-import { useEffect, useLayoutEffect, useState } from "react";
+import { useEffect, useLayoutEffect } from "react";
+import { useWorkspaceHistory } from "./useWorkspaceHistory";
+import { sameColor } from "./workspaceHistory";
 import { normalizePresets } from "./presets";
 export {
   pickerModes,
@@ -23,6 +25,7 @@ export function pickedColor(state: Pick<Workspace, "color" | "palette">) {
 
 function withPickedColor(state: Workspace, color: Color): Workspace {
   color = clampColor(color);
+  if (sameColor(pickedColor(state), color)) return state;
   return state.palette?.endpoint === "end"
     ? { ...state, palette: { ...state.palette, end: color } }
     : { ...state, color };
@@ -118,7 +121,11 @@ function readWorkspace(initial: () => Workspace) {
 }
 
 export function useWorkspace(initial: () => Workspace, shared?: PresetShare) {
-  const [state, setState] = useState(() => {
+  const {
+    state,
+    change: setState,
+    ...historyControls
+  } = useWorkspaceHistory(() => {
     const local = readWorkspace(initial);
     return shared ? importPresetShare(shared, local) : local;
   });
@@ -160,7 +167,11 @@ export function useWorkspace(initial: () => Workspace, shared?: PresetShare) {
     };
   }, []);
   function set<K extends keyof Workspace>(key: K, value: Workspace[K]) {
-    setState((previous) => ({ ...previous, [key]: value }));
+    setState(
+      (previous) =>
+        previous[key] === value ? previous : { ...previous, [key]: value },
+      !["selected", "tab", "width"].includes(key),
+    );
   }
   function updateState<K extends keyof Workspace>(
     key: K,
@@ -168,7 +179,7 @@ export function useWorkspace(initial: () => Workspace, shared?: PresetShare) {
   ) {
     setState((previous) => ({ ...previous, [key]: change(previous[key]) }));
   }
-  const setColor = (color: Color) =>
-    setState((previous) => withPickedColor(previous, color));
-  return { state, set, setColor, updateState };
+  const setColor = (color: Color, record = true) =>
+    setState((previous) => withPickedColor(previous, color), record);
+  return { state, set, setColor, updateState, ...historyControls };
 }
