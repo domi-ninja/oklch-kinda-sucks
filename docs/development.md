@@ -16,7 +16,7 @@ The development command starts Vite on port 5173 and the share API on port 5174.
 - `src/App.tsx` owns the editor UI, preset actions, and downloads.
 - `src/workspace.ts` handles browser persistence, color URLs, and preset imports. `src/workspaceSchema.ts` validates workspace and share data.
 - `src/sharing.ts` calls the share API. Read [Sharing and storage](sharing.md) before changing payloads or URL behavior.
-- Picker planes render in workers. The demo stylesheet compiles in a separate Tailwind worker and renders in sandboxed light and dark iframes.
+- Picker planes render in workers. The demo stylesheet compiles in a separate Tailwind worker. Sandboxed light and dark iframes receive CSS updates in place, preserving their scroll positions and form state.
 - `export-template` contains the React/Vite/shadcn/ui project sources. `src/exportApp.ts` packages them with the current theme and standalone preview snapshots. The export module loads on demand. The editor's stylesheet excludes template files from its Tailwind source scan.
 - `server.ts` serves the built app and immutable preset links. Ordinary editor state stays in browser storage.
 

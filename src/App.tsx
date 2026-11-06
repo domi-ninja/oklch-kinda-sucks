@@ -19,6 +19,7 @@ import { createPaletteRamp, paletteCss } from "./palette";
 import { ColorEditors } from "./ColorEditors";
 import { ColorSwatches } from "./ColorSwatches";
 import { useAppUpdate } from "./useAppUpdate";
+import { PreviewFrame } from "./PreviewFrame";
 import {
   cssColor,
   parseColor,
@@ -703,11 +704,10 @@ export function App({ shared }: { shared?: PresetShare }) {
                         <ExternalLink size={16} />
                       </Button>
                     </div>
-                    <iframe
-                      title={`shadcn/ui ${mode.label.toLowerCase()} preview`}
-                      sandbox="allow-scripts"
-                      srcDoc={demoDocument(compiled.css, false, mode.dark)}
-                      style={{ width, maxWidth: "100%" }}
+                    <PreviewFrame
+                      css={compiled.css}
+                      dark={mode.dark}
+                      width={width}
                     />
                   </section>
                 ))}

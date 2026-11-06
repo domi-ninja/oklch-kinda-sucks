@@ -12,11 +12,19 @@ export function demoDocument(
   css: string,
   externalStylesheet = false,
   dark = false,
+  options: { live?: boolean } = {},
 ) {
   const styles = externalStylesheet
     ? '<link rel="stylesheet" href="./styles.css">'
-    : `<style>${css.replace(/<\/style/gi, "<\\/style")}</style>`;
-  return `<!doctype html><html lang="en" class="${dark ? "dark" : ""}"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>shadcn/ui ${dark ? "dark" : "light"} preview</title>${styles}</head><body>${demoBody}<script>${demoScript}</script></body></html>`;
+    : `<style id="preview-theme">${css.replace(/<\/style/gi, "<\\/style")}</style>`;
+  const liveStyles = options.live
+    ? `;window.addEventListener('message', event => {
+    if (event.source !== parent || event.data?.type !== 'preview-theme' || typeof event.data.css !== 'string') return;
+    const style = document.getElementById('preview-theme');
+    if (style && style.textContent !== event.data.css) style.textContent = event.data.css;
+  });`
+    : "";
+  return `<!doctype html><html lang="en" class="${dark ? "dark" : ""}"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>shadcn/ui ${dark ? "dark" : "light"} preview</title>${styles}</head><body>${demoBody}<script>${demoScript}${liveStyles}</script></body></html>`;
 }
 export const candidates = [
   ...new Set(
