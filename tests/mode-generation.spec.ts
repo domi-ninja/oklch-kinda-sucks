@@ -383,7 +383,7 @@ test("mode UI generates both directions, preserves the source preview, and undoe
   );
 });
 
-test("generation controls survive reload and share snapshots and fit mobile", async ({
+test("generation controls survive reload, stay local when sharing presets, and fit mobile", async ({
   page,
   browser,
 }) => {
@@ -433,23 +433,32 @@ test("generation controls survive reload and share snapshots and fit mobile", as
       ),
     ).toBe(true);
   }
-  await page.getByRole("button", { name: "Share", exact: true }).click();
-  const link = page.getByLabel("Share link", { exact: true });
+  await page.getByRole("button", { name: "Share preset", exact: true }).click();
+  const link = page.getByLabel("Preset share link", { exact: true });
   await expect(link).toHaveValue(/\/share\//);
   const context = await browser.newContext();
   try {
     const shared = await context.newPage();
+    await shared.goto("/");
+    await shared.getByLabel("Chroma percent", { exact: true }).fill("110");
+    await shared.getByLabel("Chroma percent", { exact: true }).press("Tab");
+    const receiver = workspaceSchema.parse(
+      await shared.evaluate(
+        (key) => JSON.parse(localStorage.getItem(key)!),
+        workspaceStorageKey,
+      ),
+    );
     await shared.goto(await link.inputValue());
     await expect(
       shared.getByLabel("Chroma percent", { exact: true }),
-    ).toHaveValue("75");
+    ).toHaveValue("110");
     const snapshot = workspaceSchema.parse(
       await shared.evaluate(
         (key) => JSON.parse(localStorage.getItem(key)!),
         workspaceStorageKey,
       ),
     );
-    expect(snapshot.modeGeneration).toEqual(state.modeGeneration);
+    expect(snapshot.modeGeneration).toEqual(receiver.modeGeneration);
     expect(snapshot.source).toBe(state.source);
   } finally {
     await context.close();

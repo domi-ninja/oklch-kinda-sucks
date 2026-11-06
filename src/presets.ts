@@ -1,4 +1,4 @@
-import { presets, sourceFor, isRetiredPreset, withDarkTheme } from "./demo";
+import { presets, sourceFor } from "./demo";
 export type Saved = { id: string; name: string; source: string };
 export const defaultPresets: Saved[] = presets.map((p) => ({
   id: p.id,
@@ -7,25 +7,11 @@ export const defaultPresets: Saved[] = presets.map((p) => ({
 }));
 export const isDefaultPreset = (id: string) =>
   defaultPresets.some((p) => p.id === id);
-// Built-ins always come from code. Preserve previously saved edits as custom copies.
+// Built-ins come from code; custom presets retain their browser-saved values.
 export function normalizePresets(saved: Saved[]): Saved[] {
-  const custom = saved
-    .filter((p) => !isRetiredPreset(p))
-    .flatMap((p) => {
-      const builtin = defaultPresets.find(
-        (defaultPreset) => defaultPreset.id === p.id,
-      );
-      if (!builtin) return [p];
-      if (builtin.source === withDarkTheme(p.source) && builtin.name === p.name)
-        return [];
-      return [
-        {
-          id: `custom:${p.id}`,
-          name: `${p.name} copy`,
-          source: p.source,
-        },
-      ];
-    });
+  const custom = saved.filter(
+    (preset) => !isDefaultPreset(preset.id) && preset.id !== "midnight",
+  );
   return [
     ...defaultPresets,
     ...custom.filter(

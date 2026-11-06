@@ -12,7 +12,7 @@ async function start() {
   if (share)
     root.render(
       <p className="p-4" role="status">
-        Opening shared workspace…
+        Opening shared preset…
       </p>,
     );
   try {

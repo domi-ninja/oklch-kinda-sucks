@@ -42,15 +42,11 @@ export const workspaceSchema = z.object({
 });
 export type Workspace = z.infer<typeof workspaceSchema>;
 
-export const snapshotSchema = workspaceSchema.omit({ saved: true }).extend({
-  source: z.string().max(500_000),
-  preset: z
-    .object({
-      id: z.string().max(200),
-      name: z.string().max(200),
-      source: z.string().max(500_000),
-    })
-    .nullable(),
-  pickers: workspaceSchema.shape.pickers.max(32),
+export const presetShareSchema = z.object({
+  version: z.literal(2),
+  preset: z.object({
+    name: z.string().trim().min(1).max(200),
+    source: z.string().max(500_000),
+  }),
 });
-export type Snapshot = z.infer<typeof snapshotSchema>;
+export type PresetShare = z.infer<typeof presetShareSchema>;

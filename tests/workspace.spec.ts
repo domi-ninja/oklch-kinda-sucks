@@ -1,11 +1,8 @@
 import { test, expect } from "@playwright/test";
 import { defaultPresets } from "../src/presets";
 import {
-  colorFromHash,
-  createSnapshot,
-  encodeWorkspace,
-  importSnapshot,
-  workspaceStorageKey,
+  createPresetShare,
+  importPresetShare,
   type Workspace,
 } from "../src/workspace";
 
@@ -31,56 +28,53 @@ const workspace: Workspace = {
   ],
 };
 
-test("sharing excludes other presets and importing preserves the receiver's saved presets", () => {
+test("sharing carries only the current preset and import preserves the receiver's local workspace", () => {
   const privatePreset = {
     id: "private",
     name: "Unrelated palette",
     source: "private stylesheet",
   };
-  const snapshot = createSnapshot({
+  const share = createPresetShare({
     ...workspace,
     saved: [...workspace.saved, privatePreset],
   });
-  expect(JSON.stringify(snapshot)).not.toContain(privatePreset.source);
-  expect(snapshot.preset?.name).toBe("My palette");
+  expect(share).toEqual({
+    version: 2,
+    preset: { name: "My palette", source: workspace.source },
+  });
   const receiver = {
     ...workspace,
+    color: { l: 0.8, c: 0.1, h: 90, a: 1 },
+    palette: {
+      end: { l: 0.3, c: 0.1, h: 20, a: 1 },
+      endpoint: "end",
+      subdivisions: 3,
+      mode: "RGB",
+    } as const,
+    modeGeneration: {
+      from: "dark",
+      background: 0.98,
+      contrast: 1.1,
+      chroma: 0.9,
+    } as const,
     saved: [
       { id: "custom", name: "Existing palette", source: "existing stylesheet" },
       privatePreset,
     ],
   };
-  const imported = importSnapshot(snapshot, receiver);
+  const imported = importPresetShare(share, receiver);
   expect(imported.saved).toContainEqual(receiver.saved[0]);
   expect(imported.saved).toContainEqual(privatePreset);
   expect(imported.active).not.toBe("custom");
   expect(
     imported.saved.find((preset) => preset.id === imported.active)?.source,
-  ).toBe(snapshot.preset?.source);
+  ).toBe(workspace.source);
   expect(imported.source).toBe(workspace.source);
-  expect(colorFromHash("#0.6,0.2,30,50")).toEqual(workspace.color);
-});
-
-test("old workspace links migrate into browser storage and a color and picker URL", async ({
-  page,
-}) => {
-  await page.goto(`/#s=${encodeWorkspace(workspace)}`);
-  await expect(page.getByLabel("Picker mode", { exact: true })).toHaveCount(2);
-  await expect(page.getByLabel("shadcn/ui theme stylesheet")).toHaveValue(
-    workspace.source,
-  );
-  await expect(page).toHaveURL(/\/#color=0\.6,0\.2,30,0\.5&pickers=RGB,HSL$/);
-  expect(
-    await page.evaluate(
-      (key) => JSON.parse(localStorage.getItem(key)!),
-      workspaceStorageKey,
-    ),
-  ).toEqual(workspace);
-  await page.reload();
-  await expect(page.getByLabel("shadcn/ui theme stylesheet")).toHaveValue(
-    workspace.source,
-  );
-  await expect(page.getByLabel("Preset", { exact: true })).toHaveValue(
-    "custom",
-  );
+  expect(imported.color).toEqual(receiver.color);
+  expect(imported.palette).toEqual(receiver.palette);
+  expect(imported.modeGeneration).toEqual(receiver.modeGeneration);
+  expect(imported.pickers).toEqual(receiver.pickers);
+  expect(imported.width).toBe(receiver.width);
+  expect(imported.tab).toBe(receiver.tab);
+  expect(importPresetShare(share, imported)).toEqual(imported);
 });

@@ -37,20 +37,16 @@ async function start(database) {
   };
 }
 
-test("share snapshots survive a server restart; invalid writes leave no share", async () => {
+test("preset links persist across restarts and unsupported records are purged", async () => {
   const directory = await mkdtemp(join(tmpdir(), "color-shares-"));
   const database = join(directory, "shares.sqlite");
   let server = await start(database);
-  const snapshot = {
-    version: 1,
-    active: "",
-    source: "@theme { --color-primary: oklch(0.6 0.2 30); }",
-    color: { l: 0.6, c: 0.2, h: 30, a: 1 },
-    selected: null,
-    tab: "preview",
-    width: "100%",
-    pickers: [{ id: "one", mode: "HSL" }],
-    preset: null,
+  const preset = {
+    version: 2,
+    preset: {
+      name: "Shared theme",
+      source: "@theme { --color-primary: oklch(0.6 0.2 30); }",
+    },
   };
   try {
     const invalid = await fetch(`${server.url}/api/shares`, {
@@ -62,18 +58,39 @@ test("share snapshots survive a server restart; invalid writes leave no share", 
     const created = await fetch(`${server.url}/api/shares`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(snapshot),
+      body: JSON.stringify({
+        ...preset,
+        color: { l: 0.6, c: 0.2, h: 30, a: 1 },
+        pickers: [],
+      }),
     });
     assert.equal(created.status, 201);
     const { id } = await created.json();
     assert.match(id, /^[\w-]{16}$/);
     await server.stop();
+    const { DatabaseSync } = await import("node:sqlite");
+    const db = new DatabaseSync(database);
+    try {
+      assert.deepEqual(
+        JSON.parse(
+          db.prepare("SELECT snapshot FROM shares WHERE id = ?").get(id)
+            .snapshot,
+        ),
+        preset,
+      );
+      db.prepare("INSERT INTO shares (id,snapshot) VALUES (?,?)").run(
+        "obsoleteShare001",
+        JSON.stringify({ version: 0 }),
+      );
+    } finally {
+      db.close();
+    }
     server = await start(database);
     const restored = await fetch(`${server.url}/api/shares/${id}`);
     assert.equal(restored.status, 200);
-    assert.deepEqual(await restored.json(), snapshot);
+    assert.deepEqual(await restored.json(), preset);
     assert.equal(
-      (await fetch(`${server.url}/api/shares/missing-share-id`)).status,
+      (await fetch(`${server.url}/api/shares/obsoleteShare001`)).status,
       404,
     );
     assert.equal(
@@ -87,7 +104,7 @@ test("share snapshots survive a server restart; invalid writes leave no share", 
     );
     assert.deepEqual(
       await (await fetch(`${server.url}/api/shares/${id}`)).json(),
-      snapshot,
+      preset,
     );
   } finally {
     await server.stop();

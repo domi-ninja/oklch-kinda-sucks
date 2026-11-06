@@ -1,11 +1,11 @@
 import { z } from "zod";
-import { snapshotSchema, type Snapshot } from "./workspaceSchema";
+import { presetShareSchema, type PresetShare } from "./workspaceSchema";
 
-export async function saveShare(snapshot: Snapshot) {
+export async function saveShare(preset: PresetShare) {
   const response = await fetch("/api/shares", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(snapshot),
+    body: JSON.stringify(preset),
   });
   if (!response.ok) throw new Error("Could not create share link. Try again.");
   const { id } = z
@@ -14,7 +14,7 @@ export async function saveShare(snapshot: Snapshot) {
   return new URL(`/share/${id}`, location.origin).href;
 }
 
-export async function loadShare(id: string): Promise<Snapshot> {
+export async function loadShare(id: string): Promise<PresetShare> {
   const response = await fetch(`/api/shares/${encodeURIComponent(id)}`);
   if (!response.ok)
     throw new Error(
@@ -22,5 +22,5 @@ export async function loadShare(id: string): Promise<Snapshot> {
         ? "Share link not found."
         : "Could not open share link. Try again.",
     );
-  return snapshotSchema.parse(await response.json());
+  return presetShareSchema.parse(await response.json());
 }

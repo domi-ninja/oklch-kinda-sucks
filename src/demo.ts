@@ -59,15 +59,12 @@ const declarations = (tokens: Record<string, string>) =>
   Object.entries(tokens)
     .map(([key, value]) => `  --color-${key}: ${value};`)
     .join("\n");
-// Upgrade older saved presets without replacing their existing colors.
-export const withDarkTheme = (source: string) =>
-  /\.dark\b/.test(source)
+export const sourceFor = (tokens: Record<string, string>, extra: string) => {
+  const source = `@import "tailwindcss";\n\n@theme {\n${declarations(tokens)}\n}\n\n${extra}`;
+  return /\.dark\b/.test(source)
     ? source
     : `${source}\n\n:root { color-scheme: light; }\n.dark {\n  color-scheme: dark;\n${declarations(darkTokens)}\n}\n`;
-export const sourceFor = (tokens: Record<string, string>, extra: string) =>
-  withDarkTheme(
-    `@import "tailwindcss";\n\n@theme {\n${declarations(tokens)}\n}\n\n${extra}`,
-  );
+};
 export type Preset = {
   id: string;
   name: string;
@@ -138,22 +135,3 @@ main button { font-weight: 700; box-shadow: 3px 3px 0 var(--color-border); }
 main button:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--color-border); }`,
   },
 ];
-
-// Recognize the retired built-in while keeping user-edited versions intact.
-const retiredMidnightSource = sourceFor(
-  {
-    ...baseTokens,
-    background: "oklch(0.17 0.015 260)",
-    foreground: "oklch(0.95 0.01 260)",
-    card: "oklch(0.22 0.02 260)",
-    "card-foreground": "oklch(0.95 0.01 260)",
-    border: "oklch(0.34 0.02 260)",
-    muted: "oklch(0.28 0.02 260)",
-    "muted-foreground": "oklch(0.75 0.02 260)",
-    secondary: "oklch(0.3 0.03 165)",
-  },
-  "",
-);
-export const isRetiredPreset = (preset: { id: string; source: string }) =>
-  preset.id === "midnight" &&
-  withDarkTheme(preset.source) === retiredMidnightSource;

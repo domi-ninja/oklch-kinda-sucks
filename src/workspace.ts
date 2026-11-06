@@ -1,6 +1,4 @@
 import { useEffect, useLayoutEffect, useState } from "react";
-import { gzipSync, gunzipSync, strToU8, strFromU8 } from "fflate";
-import { isRetiredPreset, sourceFor, baseTokens } from "./demo";
 import { normalizePresets } from "./presets";
 export {
   pickerModes,
@@ -12,7 +10,7 @@ import {
   colorSchema,
   pickerModes,
   type Workspace,
-  type Snapshot,
+  type PresetShare,
 } from "./workspaceSchema";
 import { round, type Color } from "./color";
 import { clampColor } from "./colorBounds";
@@ -35,11 +33,11 @@ export function colorHash(color: Color) {
 }
 export function colorFromHash(hash: string): Color | null {
   const encoded = new URLSearchParams(hash.slice(1)).get("color");
-  const current = encoded !== null;
-  const parts = (encoded ?? hash.slice(1)).split(",");
+  if (encoded === null) return null;
+  const parts = encoded.split(",");
   if (parts.length !== 4 || parts.some((part) => !part.trim())) return null;
   const [l, c, h, a] = parts.map(Number);
-  const parsed = colorSchema.safeParse({ l, c, h, a: current ? a : a / 100 });
+  const parsed = colorSchema.safeParse({ l, c, h, a });
   return parsed.success ? parsed.data : null;
 }
 
@@ -67,76 +65,37 @@ function pickersFromHash(hash: string, existing: Workspace["pickers"]) {
     );
 }
 
-export function createSnapshot(state: Workspace): Snapshot {
-  const { saved, ...workspace } = state;
+export function createPresetShare(state: Workspace): PresetShare {
   return {
-    ...workspace,
-    preset: saved.find((preset) => preset.id === state.active) ?? null,
+    version: 2,
+    preset: {
+      name:
+        state.saved.find((preset) => preset.id === state.active)?.name ??
+        "Untitled preset",
+      source: state.source,
+    },
   };
 }
 
-export function importSnapshot(
-  snapshot: Snapshot,
+export function importPresetShare(
+  share: PresetShare,
   local: Workspace,
 ): Workspace {
-  const { preset, ...workspace } = snapshot;
-  let active = "";
-  const saved = [...local.saved];
-  if (preset) {
-    const existing = saved.find((item) => item.id === preset.id);
-    active =
-      existing &&
-      (existing.source !== preset.source || existing.name !== preset.name)
-        ? crypto.randomUUID()
-        : preset.id;
-    if (!existing || active !== existing.id)
-      saved.push({ ...preset, id: active });
-  }
-  return { ...workspace, active, saved: normalizePresets(saved) };
+  const existing = local.saved.find(
+    (preset) =>
+      preset.name === share.preset.name &&
+      preset.source === share.preset.source,
+  );
+  const preset = existing ?? { id: crypto.randomUUID(), ...share.preset };
+  return {
+    ...local,
+    active: preset.id,
+    source: preset.source,
+    selected: null,
+    saved: existing ? local.saved : [...local.saved, preset],
+  };
 }
 
-// Kept for importing the compressed workspace links used before color-only URLs.
-export function encodeWorkspace(state: Workspace) {
-  const bytes = gzipSync(strToU8(JSON.stringify(state)), { mtime: 0 });
-  let binary = "";
-  for (let i = 0; i < bytes.length; i += 8192)
-    binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
-  return btoa(binary)
-    .replaceAll("+", "-")
-    .replaceAll("/", "_")
-    .replace(/=+$/, "");
-}
-export function decodeWorkspace(hash: string): Workspace | null {
-  if (!hash.startsWith("#s=")) return null;
-  try {
-    const binary = atob(
-      hash.slice(3).replaceAll("-", "+").replaceAll("_", "/"),
-    );
-    const state = workspaceSchema.parse(
-      JSON.parse(
-        strFromU8(gunzipSync(Uint8Array.from(binary, (c) => c.charCodeAt(0)))),
-      ),
-    );
-    const saved = normalizePresets(state.saved);
-    const retired = state.saved.find(
-      (p) => p.id === state.active && isRetiredPreset(p),
-    );
-    return {
-      ...state,
-      saved,
-      ...(retired ? { active: "" } : {}),
-      ...(retired && state.source === retired.source
-        ? {
-            active: saved[0]?.id ?? "",
-            source: saved[0]?.source ?? sourceFor(baseTokens, ""),
-            selected: null,
-          }
-        : {}),
-    };
-  } catch {
-    return null;
-  }
-}
 function readWorkspace(initial: () => Workspace) {
   let state = initial();
   try {
@@ -148,8 +107,6 @@ function readWorkspace(initial: () => Workspace) {
   } catch {
     /* Continue in memory when browser storage is unavailable. */
   }
-  const legacy = decodeWorkspace(location.hash);
-  if (legacy) return legacy;
   const color = colorFromHash(location.hash);
   const pickers = pickersFromHash(location.hash, state.pickers);
   return {
@@ -160,10 +117,10 @@ function readWorkspace(initial: () => Workspace) {
   };
 }
 
-export function useWorkspace(initial: () => Workspace, shared?: Snapshot) {
+export function useWorkspace(initial: () => Workspace, shared?: PresetShare) {
   const [state, setState] = useState(() => {
     const local = readWorkspace(initial);
-    return shared ? importSnapshot(shared, local) : local;
+    return shared ? importPresetShare(shared, local) : local;
   });
   useLayoutEffect(
     function persistColorAndPickersInUrl() {
@@ -186,11 +143,6 @@ export function useWorkspace(initial: () => Workspace, shared?: Snapshot) {
   );
   useEffect(function restoreColorNavigation() {
     const restore = () => {
-      const legacy = decodeWorkspace(location.hash);
-      if (legacy) {
-        setState(legacy);
-        return;
-      }
       const color = colorFromHash(location.hash);
       setState((previous) => ({
         ...(color

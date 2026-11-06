@@ -282,7 +282,7 @@ test("palette paths cross the hue seam without a false line through other hues",
   ).toBe(true);
 });
 
-test("palette saves locally, shares both endpoints, and fits on phones", async ({
+test("palette stays local when sharing a preset and fits on phones", async ({
   page,
   browser,
 }) => {
@@ -328,8 +328,8 @@ test("palette saves locally, shares both endpoints, and fits on phones", async (
         ),
     ).toBe(true);
   }
-  await page.getByRole("button", { name: "Share", exact: true }).click();
-  const share = page.getByLabel("Share link", { exact: true });
+  await page.getByRole("button", { name: "Share preset", exact: true }).click();
+  const share = page.getByLabel("Preset share link", { exact: true });
   await expect(share).toBeVisible();
   const url = await share.inputValue();
   expect(writes).toHaveLength(1);
@@ -339,15 +339,24 @@ test("palette saves locally, shares both endpoints, and fits on phones", async (
   await expect(
     shared.getByRole("button", { name: "Create palette", exact: true }),
   ).toBeVisible();
+  await shared
+    .getByRole("button", { name: "Create palette", exact: true })
+    .click();
+  await shared.getByLabel("Palette subdivisions", { exact: true }).fill("3");
+  await shared
+    .getByLabel("Palette interpolation", { exact: true })
+    .selectOption("RGB");
+  const receiver = await workspace(shared);
   await shared.goto(url);
   await expect(
     shared.getByLabel("Palette interpolation", { exact: true }),
-  ).toHaveValue("HCL");
+  ).toHaveValue("RGB");
   await expect(
     shared.getByLabel("Palette subdivisions", { exact: true }),
-  ).toHaveValue("6");
+  ).toHaveValue("3");
   const imported = await workspace(shared);
-  expect(imported.palette).toEqual(saved.palette);
-  expect(imported.color).toEqual(saved.color);
+  expect(imported.palette).toEqual(receiver.palette);
+  expect(imported.color).toEqual(receiver.color);
+  expect(imported.source).toBe(saved.source);
   await context.close();
 });

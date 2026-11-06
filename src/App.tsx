@@ -30,11 +30,11 @@ import { demoDocument } from "./demo";
 import {
   useWorkspace,
   pickerModes,
-  createSnapshot,
+  createPresetShare,
   pickedColor,
   type Workspace,
 } from "./workspace";
-import type { Snapshot, PaletteEndpoint } from "./workspaceSchema";
+import type { PresetShare, PaletteEndpoint } from "./workspaceSchema";
 import { saveShare } from "./sharing";
 import { useCompiler } from "./useCompiler";
 
@@ -99,7 +99,11 @@ function themeEntries(source: string) {
         `color-${match.index}`),
   }));
 }
-export function App({ shared }: { shared?: Snapshot }) {
+type PresetShareResult = { active: string; name: string; source: string } & (
+  | { status: "ready"; url: string; copied: boolean }
+  | { status: "error"; message: string }
+);
+export function App({ shared }: { shared?: PresetShare }) {
   const { state, set, setColor, updateState } = useWorkspace(
     initialWorkspace,
     shared,
@@ -132,8 +136,9 @@ export function App({ shared }: { shared?: Snapshot }) {
   const updateAvailable = useAppUpdate();
   const [sharing, setSharing] = useState(false);
   const [exporting, setExporting] = useState(false);
-  const [shareUrl, setShareUrl] = useState("");
-  const [shareError, setShareError] = useState("");
+  const [shareResult, setShareResult] = useState<PresetShareResult | null>(
+    null,
+  );
   const compiled = useCompiler(source);
   const entries = useMemo(() => themeEntries(source), [source]);
   const pairedEntries = useMemo(() => {
@@ -164,6 +169,12 @@ export function App({ shared }: { shared?: Snapshot }) {
     }
   }, [color]);
   const activePreset = saved.find((p) => p.id === active);
+  const currentShare =
+    shareResult?.active === active &&
+    shareResult.source === source &&
+    shareResult.name === activePreset?.name
+      ? shareResult
+      : null;
   const dirty = source !== activePreset?.source;
   const discardPresetChanges = () => {
     if (!activePreset) return;
@@ -261,19 +272,29 @@ export function App({ shared }: { shared?: Snapshot }) {
     }
   };
   const share = async () => {
+    if (!activePreset) return;
+    const context = { active, source, name: activePreset.name };
     setSharing(true);
-    setShareError("");
-    setShareUrl("");
+    setShareResult(null);
     try {
-      const url = await saveShare(createSnapshot(state));
-      setShareUrl(url);
-      await copy(url);
+      const url = await saveShare(createPresetShare(state));
+      let copied = false;
+      try {
+        await navigator.clipboard.writeText(url);
+        copied = true;
+      } catch {
+        // The link stays available for manual copying.
+      }
+      setShareResult({ ...context, status: "ready", url, copied });
     } catch (error) {
-      setShareError(
-        error instanceof Error
-          ? error.message
-          : "Could not create share link. Try again.",
-      );
+      setShareResult({
+        ...context,
+        status: "error",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Could not create share link. Try again.",
+      });
     } finally {
       setSharing(false);
     }
@@ -326,14 +347,6 @@ export function App({ shared }: { shared?: Snapshot }) {
               <Plus size={15} />
               Add picker
             </Button>
-            <Button variant="outline" disabled={sharing} onClick={share}>
-              {sharing ? (
-                <LoaderCircle size={15} className="motion-safe:animate-spin" />
-              ) : (
-                <Link size={15} />
-              )}
-              Share
-            </Button>
             {!palette && (
               <Button variant="outline" onClick={createPalette}>
                 Create palette
@@ -346,20 +359,6 @@ export function App({ shared }: { shared?: Snapshot }) {
                   Reload
                 </Button>
               </>
-            )}
-            {shareUrl && (
-              <input
-                className="share-link"
-                aria-label="Share link"
-                readOnly
-                value={shareUrl}
-                onFocus={(event) => event.currentTarget.select()}
-              />
-            )}
-            {shareError && (
-              <span role="alert" className="error">
-                {shareError}
-              </span>
             )}
           </div>
           {palette && ramp && (
@@ -447,9 +446,9 @@ export function App({ shared }: { shared?: Snapshot }) {
           ))}
         </aside>
         <div className="theme-column">
-          <section className="panel">
+          <section className="panel" aria-labelledby="presets-heading">
             <div className="panel-heading">
-              <h2>Presets</h2>
+              <h2 id="presets-heading">Presets</h2>
               <Button
                 variant="ghost"
                 aria-label="Create preset"
@@ -540,6 +539,43 @@ export function App({ shared }: { shared?: Snapshot }) {
                 >
                   Discard changes
                 </Button>
+              )}
+              <Button
+                variant="outline"
+                className="basis-full"
+                disabled={sharing || !activePreset}
+                onClick={share}
+              >
+                {sharing ? (
+                  <LoaderCircle
+                    size={15}
+                    className="motion-safe:animate-spin"
+                  />
+                ) : (
+                  <Link size={15} />
+                )}
+                Share preset
+              </Button>
+              {currentShare?.status === "ready" && (
+                <>
+                  <input
+                    className="share-link basis-full"
+                    aria-label="Preset share link"
+                    readOnly
+                    value={currentShare.url}
+                    onFocus={(event) => event.currentTarget.select()}
+                  />
+                  <span className="basis-full" role="status">
+                    {currentShare.copied
+                      ? "Preset link copied"
+                      : "Preset link ready"}
+                  </span>
+                </>
+              )}
+              {currentShare?.status === "error" && (
+                <span className="error basis-full" role="alert">
+                  {currentShare.message}
+                </span>
               )}
             </div>
           </section>

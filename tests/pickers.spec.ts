@@ -234,12 +234,17 @@ test("all modes share one color, fill their planes, and close independently", as
   ).toHaveAttribute("style", /background: rgb\(0,\s*255,\s*0\)/);
 });
 
-test("Share exports the active workspace to another browser", async ({
+test("Share preset shares only the current theme and keeps the receiver's layout local", async ({
   page,
   browser,
 }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "Add picker" }).click();
+  const posted: unknown[] = [];
+  page.on("request", (request) => {
+    if (request.method() === "POST" && request.url().includes("/api/shares"))
+      posted.push(request.postDataJSON());
+  });
+  await page.getByRole("button", { name: "Add picker", exact: true }).click();
   await page
     .getByLabel("Picker mode", { exact: true })
     .last()
@@ -250,10 +255,7 @@ test("Share exports the active workspace to another browser", async ({
   await editor.fill(
     (await editor.inputValue()) + "\n@theme { --radius-lg: 2rem; }",
   );
-  await page
-    .locator(".token")
-    .filter({ has: page.locator(".token-name", { hasText: /^primary$/ }) })
-    .click();
+  await page.locator('.token[title="color-primary"]').click();
   await page
     .getByLabel("OKLCH value", { exact: true })
     .first()
@@ -262,37 +264,55 @@ test("Share exports the active workspace to another browser", async ({
     .getByRole("button", { name: "Apply color", exact: true })
     .first()
     .click();
-  const snapshot = await readWorkspace(page);
-  await page.getByRole("button", { name: "Share", exact: true }).click();
-  const shareLink = page.getByLabel("Share link", { exact: true });
-  await expect(shareLink).toBeVisible();
-  const url = await shareLink.inputValue();
-  expect(snapshot.pickers.map((p) => p.mode)).toEqual(["OKHCL", "HCL"]);
-  expect(snapshot.source).toContain("--radius-lg: 2rem");
-  expect(snapshot.selected).not.toBeNull();
+  const sender = await readWorkspace(page);
+  const presets = page.getByRole("region", { name: "Presets", exact: true });
+  await presets
+    .getByRole("button", { name: "Share preset", exact: true })
+    .click();
+  const link = presets.getByLabel("Preset share link", { exact: true });
+  await expect(link).toHaveValue(/\/share\//);
+  const url = await link.inputValue();
+  expect(posted).toEqual([
+    { version: 2, preset: { name: "Mint studio", source: sender.source } },
+  ]);
   const context = await browser.newContext();
-  const shared = await context.newPage();
-  await shared.goto(url);
-  for (const [index, mode] of ["OKHCL", "HCL"].entries())
+  try {
+    const shared = await context.newPage();
+    await shared.goto("/#color=0.8,0.1,90,1&pickers=RGB");
+    await shared
+      .getByLabel("Preview width", { exact: true })
+      .selectOption("768px");
+    shared.once("dialog", (dialog) => dialog.accept("Receiver theme"));
+    await shared
+      .getByRole("button", { name: "Create preset", exact: true })
+      .click();
+    const receiver = await readWorkspace(shared);
+    await shared.goto(url);
     await expect(
-      shared.getByLabel("Picker mode", { exact: true }).nth(index),
-    ).toHaveValue(mode);
-  expect(await readWorkspace(shared)).toEqual(snapshot);
-  await expect(shared.getByLabel("shadcn/ui theme stylesheet")).toHaveValue(
-    snapshot.source,
-  );
-  await shared.reload();
-  expect(await readWorkspace(shared)).toEqual(snapshot);
-  await shared.getByRole("tab", { name: "Components", exact: true }).click();
-  await expect(shared.getByLabel("Preview width", { exact: true })).toHaveValue(
-    "375px",
-  );
-  await expect(
-    shared
-      .frameLocator('iframe[title="shadcn/ui dark preview"]')
-      .locator("html"),
-  ).toHaveClass("dark");
-  await context.close();
+      shared.getByLabel("Preset", { exact: true }).locator("option:checked"),
+    ).toHaveText("Mint studio");
+    const imported = await readWorkspace(shared);
+    expect(imported.source).toBe(sender.source);
+    expect(imported.selected).toBeNull();
+    expect(imported.color).toEqual(receiver.color);
+    expect(imported.pickers).toEqual(receiver.pickers);
+    expect(imported.width).toBe(receiver.width);
+    expect(imported.tab).toBe(receiver.tab);
+    expect(imported.saved.slice(0, receiver.saved.length)).toEqual(
+      receiver.saved,
+    );
+    expect(
+      imported.saved.find((preset) => preset.id === imported.active)?.source,
+    ).toBe(sender.source);
+    await shared.reload();
+    expect(await readWorkspace(shared)).toEqual(imported);
+  } finally {
+    await context.close();
+  }
+  await page.getByRole("button", { name: "Add picker", exact: true }).click();
+  await expect(link).toHaveValue(url);
+  await editor.fill(sender.source + "\n@theme { --radius-lg: 3rem; }");
+  await expect(link).toBeHidden();
 });
 
 test("color and open picker modes go in the URL; the workspace stays local", async ({

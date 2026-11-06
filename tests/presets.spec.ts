@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { defaultPresets, normalizePresets } from "../src/presets";
+import { defaultPresets } from "../src/presets";
 
 test("discard restores built-in and saved custom presets, the selected picker, and browser storage", async ({
   page,
@@ -70,20 +70,6 @@ test("discard removes added tokens and detaches their picker from the restored p
     .fill("oklch(0.5 0.1 30)");
   await page.getByRole("button", { name: "Apply color", exact: true }).click();
   await expect(stylesheet).toHaveValue(saved);
-});
-
-test("built-in definitions are restored and saved edits survive as custom copies", () => {
-  const original = defaultPresets[0];
-  const customSource = original.source + "\n@theme { --radius-lg: 2rem; }";
-  const normalized = normalizePresets([
-    { ...original, name: "Edited mint", source: customSource },
-  ]);
-  expect(normalized.find((p) => p.id === original.id)).toEqual(original);
-  expect(normalized.find((p) => p.id === `custom:${original.id}`)?.source).toBe(
-    customSource,
-  );
-  expect(normalized.slice(0, defaultPresets.length)).toEqual(defaultPresets);
-  expect(normalizePresets(normalized)).toEqual(normalized);
 });
 
 test("built-ins stay protected and Brutalist can be saved as an editable copy", async ({
