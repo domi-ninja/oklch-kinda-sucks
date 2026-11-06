@@ -335,6 +335,12 @@ export function App({ shared }: { shared?: PresetShare }) {
             gridTemplateColumns: `var(--picker-columns, repeat(${Math.max(1, pickers.length)}, 340px))`,
           }}
         >
+          {updateAvailable && (
+            <div className="app-update" role="status">
+              <strong>Update available</strong>
+              <Button onClick={() => location.reload()}>Reload</Button>
+            </div>
+          )}
           <div className="picker-toolbar">
             {message && <span role="status">{message}</span>}
             <Button
@@ -353,14 +359,6 @@ export function App({ shared }: { shared?: PresetShare }) {
               <Button variant="outline" onClick={createPalette}>
                 Create palette
               </Button>
-            )}
-            {updateAvailable && (
-              <>
-                <span role="status">Update available</span>
-                <Button variant="outline" onClick={() => location.reload()}>
-                  Reload
-                </Button>
-              </>
             )}
           </div>
           {palette && ramp && (

@@ -589,6 +589,23 @@ select {
   align-items: center;
   gap: 8px;
 }
+.app-update {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid #765300;
+  border-left-width: 4px;
+  border-radius: 6px;
+  background: #fff0ad;
+  color: #202020;
+}
+.app-update button {
+  min-height: 44px;
+}
 .share-link {
   min-width: 0;
   width: 340px;
