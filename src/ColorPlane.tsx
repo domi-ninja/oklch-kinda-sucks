@@ -1,9 +1,13 @@
 import { useEffect, useId, useRef, type ReactNode } from "react";
 import { cssColor, type Color } from "./color";
 import { channels, fromCoordinates, type Coordinates } from "./pickerModes";
-import { palettePaths, type PlanePalette } from "./palette";
+import { paletteLabels, palettePaths, type PlanePalette } from "./palette";
 import type { PlaneMapping } from "./planes";
-import type { PaletteEndpoint, PickerMode } from "./workspaceSchema";
+import {
+  palettePoints,
+  type PaletteEndpoint,
+  type PickerMode,
+} from "./workspaceSchema";
 import type { usePlaneRenderer } from "./usePlaneRenderer";
 
 function endpointFromTarget(
@@ -13,7 +17,7 @@ function endpointFromTarget(
   const endpoint = target
     .closest("[data-palette-endpoint]")
     ?.getAttribute("data-palette-endpoint");
-  return endpoint === "start" || endpoint === "end" ? endpoint : null;
+  return palettePoints.find((point) => point === endpoint) ?? null;
 }
 
 export function ColorPlane({
@@ -59,9 +63,7 @@ export function ColorPlane({
     ),
   });
   const source = (endpoint: PaletteEndpoint | null) =>
-    endpoint && palette
-      ? palette.colors[endpoint === "start" ? 0 : palette.colors.length - 1]
-      : { color, values };
+    (endpoint && palette?.controls[endpoint]) || { color, values };
   const change = (next: Coordinates, endpoint: PaletteEndpoint | null) => {
     const nextColor = fromCoordinates(next, mode, source(endpoint).color.a);
     if (endpoint && palette) palette.onChange(endpoint, nextColor);
@@ -204,30 +206,32 @@ export function ColorPlane({
                 />
               );
             })}
-            {(["start", "end"] as const).map((endpoint) => {
-              const point = source(endpoint);
-              const at = position(point.values);
-              return (
-                <button
-                  key={endpoint}
-                  type="button"
-                  className="palette-endpoint"
-                  data-palette-endpoint={endpoint}
-                  aria-label={`${endpoint === "start" ? "Start" : "End"} color in ${name} plane`}
-                  aria-pressed={palette.endpoint === endpoint}
-                  style={{ left: `${at.x}%`, top: `${at.y}%` }}
-                  onClick={() => palette.onSelect(endpoint)}
-                >
-                  <span
-                    className="endpoint-circle"
-                    style={{ background: cssColor({ ...point.color, a: 1 }) }}
-                    aria-hidden="true"
+            {palettePoints
+              .filter((point) => palette.controls[point])
+              .map((endpoint) => {
+                const point = source(endpoint);
+                const at = position(point.values);
+                return (
+                  <button
+                    key={endpoint}
+                    type="button"
+                    className="palette-endpoint"
+                    data-palette-endpoint={endpoint}
+                    aria-label={`${endpoint === "middle" ? "Middle control" : paletteLabels[endpoint]} color in ${name} plane`}
+                    aria-pressed={palette.endpoint === endpoint}
+                    style={{ left: `${at.x}%`, top: `${at.y}%` }}
+                    onClick={() => palette.onSelect(endpoint)}
                   >
-                    {endpoint === "start" ? "S" : "E"}
-                  </span>
-                </button>
-              );
-            })}
+                    <span
+                      className="endpoint-circle"
+                      style={{ background: cssColor({ ...point.color, a: 1 }) }}
+                      aria-hidden="true"
+                    >
+                      {paletteLabels[endpoint][0]}
+                    </span>
+                  </button>
+                );
+              })}
           </>
         ) : (
           <span

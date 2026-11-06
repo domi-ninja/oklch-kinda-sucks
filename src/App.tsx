@@ -130,9 +130,16 @@ export function App({ shared }: { shared?: PresetShare }) {
             palette.end,
             palette.mode,
             palette.subdivisions,
+            palette.middle,
           )
         : undefined,
-    [start, palette?.end, palette?.mode, palette?.subdivisions],
+    [
+      start,
+      palette?.end,
+      palette?.mode,
+      palette?.subdivisions,
+      palette?.middle,
+    ],
   );
   const [message, setMessage] = useState("");
   const updateAvailable = useAppUpdate();
@@ -234,6 +241,24 @@ export function App({ shared }: { shared?: PresetShare }) {
       mode: "OKHCL",
     });
     set("selected", null);
+  };
+  const togglePaletteMiddle = () => {
+    if (!palette || !ramp) return;
+    if (palette.middle) {
+      set("palette", {
+        ...palette,
+        middle: undefined,
+        endpoint: palette.endpoint === "middle" ? "start" : palette.endpoint,
+      });
+      if (palette.endpoint === "middle") set("selected", null);
+    } else {
+      set("palette", {
+        ...palette,
+        middle: ramp.path[(ramp.path.length - 1) / 2],
+        endpoint: "middle",
+      });
+      set("selected", null);
+    }
   };
   const persist = (next: Saved[]) => {
     try {
@@ -398,6 +423,7 @@ export function App({ shared }: { shared?: PresetShare }) {
                 )
               }
               onSelect={selectEndpoint}
+              onToggleMiddle={togglePaletteMiddle}
               onClose={() => {
                 set("color", color);
                 set("palette", undefined);

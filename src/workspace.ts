@@ -20,12 +20,17 @@ import { clampColor } from "./colorBounds";
 export const workspaceStorageKey = "oklch-workspace";
 
 export function pickedColor(state: Pick<Workspace, "color" | "palette">) {
-  return state.palette?.endpoint === "end" ? state.palette.end : state.color;
+  if (state.palette?.endpoint === "end") return state.palette.end;
+  if (state.palette?.endpoint === "middle" && state.palette.middle)
+    return state.palette.middle;
+  return state.color;
 }
 
 function withPickedColor(state: Workspace, color: Color): Workspace {
   color = clampColor(color);
   if (sameColor(pickedColor(state), color)) return state;
+  if (state.palette?.endpoint === "middle" && state.palette.middle)
+    return { ...state, palette: { ...state.palette, middle: color } };
   return state.palette?.endpoint === "end"
     ? { ...state, palette: { ...state.palette, end: color } }
     : { ...state, color };

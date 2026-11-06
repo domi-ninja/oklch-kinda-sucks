@@ -34,6 +34,8 @@ Opening a shared preset returns to a normal color URL after import. Use Share pr
 
 Create palette adds a second color. Select Start or End, or drag an S or E circle on a picker. Subdivisions count intervals: four subdivisions produce five colors. Choose RGB, HSL, HCL, or OKHCL for interpolation. Hue takes the shorter route around the circle.
 
+Add middle color enables a quadratic Bézier curve. Select Middle or drag its M handle to pull the curve using the selected interpolation space. The middle control is not a generated swatch or a point the curve must pass through. Remove middle color returns to linear interpolation without changing the endpoints.
+
 Intermediate markers show the generated steps and cannot be edited. Copy palette copies CSS variables for those colors. Palettes save in this browser; a color URL shares only the active endpoint.
 
 ## Generate the other theme mode

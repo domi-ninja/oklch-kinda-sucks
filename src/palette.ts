@@ -3,6 +3,52 @@ import { clampColor } from "./colorBounds";
 import { coordinates, fromCoordinates, type Coordinates } from "./pickerModes";
 import type { PaletteEndpoint, PickerMode } from "./workspaceSchema";
 
+export const paletteLabels = {
+  start: "Start",
+  middle: "Middle",
+  end: "End",
+} satisfies Record<PaletteEndpoint, string>;
+
+function hueDelta(from: number, to: number) {
+  return ((((to - from + 540) % 360) + 360) % 360) - 180;
+}
+
+function quadratic(start: number, middle: number, end: number, t: number) {
+  return (1 - t) ** 2 * start + 2 * (1 - t) * t * middle + t ** 2 * end;
+}
+
+export function bezierCoordinates(
+  start: Coordinates,
+  middle: Coordinates,
+  end: Coordinates,
+  mode: PickerMode,
+  t: number,
+): Coordinates {
+  const result: Coordinates = [
+    quadratic(start[0], middle[0], end[0], t),
+    quadratic(start[1], middle[1], end[1], t),
+    quadratic(start[2], middle[2], end[2], t),
+  ];
+  if (mode !== "RGB") {
+    const from =
+      start[1] < 0.000001
+        ? middle[1] < 0.000001
+          ? end[0]
+          : middle[0]
+        : start[0];
+    const to =
+      end[1] < 0.000001 ? (middle[1] < 0.000001 ? from : middle[0]) : end[0];
+    const unwrappedEnd = from + hueDelta(from, to);
+    const center = (from + unwrappedEnd) / 2;
+    // Lift the control hue nearest the straight path's midpoint before blending.
+    // Wrapping intermediate lerps separately can introduce a jump in the curve.
+    const control =
+      middle[1] < 0.000001 ? center : center + hueDelta(center, middle[0]);
+    result[0] = ((quadratic(from, control, unwrappedEnd, t) % 360) + 360) % 360;
+  }
+  return result;
+}
+
 export function interpolateCoordinates(
   start: Coordinates,
   end: Coordinates,
@@ -17,7 +63,7 @@ export function interpolateCoordinates(
   if (mode !== "RGB") {
     const fromHue = start[1] < 0.000001 ? end[0] : start[0];
     const toHue = end[1] < 0.000001 ? fromHue : end[0];
-    const delta = ((((toHue - fromHue + 540) % 360) + 360) % 360) - 180;
+    const delta = hueDelta(fromHue, toHue);
     result[0] = (((fromHue + delta * t) % 360) + 360) % 360;
   }
   return result;
@@ -29,11 +75,14 @@ export function createPaletteRamp(
   end: Color,
   mode: PickerMode,
   subdivisions: number,
+  middle?: Color,
 ) {
   start = clampColor(start);
   end = clampColor(end);
+  middle = middle && clampColor(middle);
   const from = coordinates(start, mode);
   const to = coordinates(end, mode);
+  const control = middle && coordinates(middle, mode);
   const cache = new Map<number, Color>([
     [0, start],
     [1, end],
@@ -42,14 +91,19 @@ export function createPaletteRamp(
     const existing = cache.get(t);
     if (existing) return existing;
     const color = fromCoordinates(
-      interpolateCoordinates(from, to, mode, t),
+      control
+        ? bezierCoordinates(from, control, to, mode, t)
+        : interpolateCoordinates(from, to, mode, t),
       mode,
-      start.a + (end.a - start.a) * t,
+      middle
+        ? quadratic(start.a, middle.a, end.a, t)
+        : start.a + (end.a - start.a) * t,
     );
     cache.set(t, color);
     return color;
   };
   return {
+    controls: { start, middle, end },
     colors: Array.from({ length: subdivisions + 1 }, (_, index) =>
       at(index / subdivisions),
     ),
@@ -70,6 +124,11 @@ export function projectPalette(palette: PaletteRamp, mode: PickerMode) {
     values: coordinates(color, mode),
   });
   return {
+    controls: {
+      start: project(palette.controls.start),
+      middle: palette.controls.middle && project(palette.controls.middle),
+      end: project(palette.controls.end),
+    },
     colors: palette.colors.map(project),
     path: palette.path.map(project),
   };

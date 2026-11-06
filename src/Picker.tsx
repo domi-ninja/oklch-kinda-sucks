@@ -30,7 +30,7 @@ export function Picker({
   const render = usePlaneRenderer();
   const projection = useMemo(
     () => (palette ? projectPalette(palette, mode) : undefined),
-    [palette?.colors, palette?.path, mode],
+    [palette?.colors, palette?.path, palette?.controls, mode],
   );
   const dimensions = [
     ...config.map((channel, index) => ({

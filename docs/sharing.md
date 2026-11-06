@@ -9,11 +9,11 @@ This is the product contract for URL handling and persistence. Keep the UI, sche
 | `/#color=L,C,H,A&pickers=HSL,OKHCL` | One current OKLCH color and the open picker modes | The address bar updates while editing |
 | `/share/<id>`                       | A preset name and its current stylesheet          | Share preset in the Presets panel     |
 
-Color URLs use lightness, chroma, hue in degrees, and alpha from 0 to 1. Values are bounded before use. In palette mode, the color is the active endpoint. The URL does not carry the other endpoint, subdivisions, or interpolation mode.
+Color URLs use lightness, chroma, hue in degrees, and alpha from 0 to 1. Values are bounded before use. In palette mode, it contains the active color, including a selected middle control. It does not describe the palette structure, other colors, subdivision count, or interpolation mode.
 
 Preset links include the editable stylesheet as it stands when Share preset is clicked. This includes unsaved changes, light and dark tokens, generated colors, radii, and other custom CSS. Sharing does not save over a preset or change its dirty state.
 
-Preset links do not include the current picker color, picker layout, selected token, palette endpoints, generator controls, preview width or tab, or other saved presets. The Share preset button, resulting link, copy status, and errors belong in the Presets panel. A result is hidden when the preset name, stylesheet, or selected preset changes. Changing picker layout alone does not invalidate it.
+Preset links do not include the current picker color, picker layout, selected token, palette endpoints or middle control, generator controls, preview width or tab, or other saved presets. The Share preset button, resulting link, copy status, and errors belong in the Presets panel. A result is hidden when the preset name, stylesheet, or selected preset changes. Changing picker layout alone does not invalidate it.
 
 ## Browser storage
 

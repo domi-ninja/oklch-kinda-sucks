@@ -10,12 +10,19 @@ export const colorSchema = z
   .transform(clampColor);
 export const pickerModes = ["RGB", "HSL", "HCL", "OKHCL"] as const;
 export type PickerMode = (typeof pickerModes)[number];
-export const paletteSchema = z.object({
-  end: colorSchema,
-  endpoint: z.enum(["start", "end"]),
-  subdivisions: z.number().int().min(1).max(64),
-  mode: z.enum(pickerModes),
-});
+export const palettePoints = ["start", "middle", "end"] as const;
+export const paletteSchema = z
+  .object({
+    end: colorSchema,
+    middle: colorSchema.optional(),
+    endpoint: z.enum(palettePoints),
+    subdivisions: z.number().int().min(1).max(64),
+    mode: z.enum(pickerModes),
+  })
+  .refine(
+    (palette) => palette.endpoint !== "middle" || !!palette.middle,
+    "The middle control color must exist before selecting it.",
+  );
 export type Palette = z.infer<typeof paletteSchema>;
 export type PaletteEndpoint = Palette["endpoint"];
 export const modeGenerationSchema = z.object({

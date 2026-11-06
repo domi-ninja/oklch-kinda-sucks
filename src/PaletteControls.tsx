@@ -2,8 +2,10 @@ import { Copy } from "lucide-react";
 import { Button } from "./components/ui/button";
 import { NumericInput } from "./NumericInput";
 import { cssColor, type Color } from "./color";
+import { paletteLabels } from "./palette";
 import {
   pickerModes,
+  palettePoints,
   type Palette,
   type PaletteEndpoint,
 } from "./workspaceSchema";
@@ -14,6 +16,7 @@ export function PaletteControls({
   colors,
   onChange,
   onSelect,
+  onToggleMiddle,
   onClose,
   onCopy,
 }: {
@@ -22,6 +25,7 @@ export function PaletteControls({
   colors: Color[];
   onChange: (patch: Partial<Pick<Palette, "mode" | "subdivisions">>) => void;
   onSelect: (endpoint: PaletteEndpoint) => void;
+  onToggleMiddle: () => void;
   onClose: () => void;
   onCopy: () => void;
 }) {
@@ -37,27 +41,30 @@ export function PaletteControls({
         <div
           className="palette-endpoints"
           role="group"
-          aria-label="Edit palette endpoint"
+          aria-label="Edit palette color"
         >
-          {(["start", "end"] as const).map((endpoint) => (
-            <Button
-              key={endpoint}
-              variant="outline"
-              aria-pressed={palette.endpoint === endpoint}
-              onClick={() => onSelect(endpoint)}
-            >
-              <span
-                className="palette-choice-color"
-                style={{
-                  background: cssColor(
-                    endpoint === "start" ? start : palette.end,
-                  ),
-                }}
-                aria-hidden="true"
-              />
-              {endpoint === "start" ? "Start" : "End"}
-            </Button>
-          ))}
+          {palettePoints.map((endpoint) => {
+            const pointColor = endpoint === "start" ? start : palette[endpoint];
+            if (!pointColor) return null;
+            return (
+              <Button
+                key={endpoint}
+                variant="outline"
+                aria-pressed={palette.endpoint === endpoint}
+                onClick={() => onSelect(endpoint)}
+              >
+                <span
+                  className="palette-choice-color"
+                  style={{ background: cssColor(pointColor) }}
+                  aria-hidden="true"
+                />
+                {paletteLabels[endpoint]}
+              </Button>
+            );
+          })}
+          <Button variant="outline" onClick={onToggleMiddle}>
+            {palette.middle ? "Remove middle color" : "Add middle color"}
+          </Button>
         </div>
         <div className="palette-config">
           <label>
