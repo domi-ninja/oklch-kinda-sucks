@@ -25,7 +25,7 @@ Use Create palette to add a second color. Select Start or End, or drag its S or 
 
 Light and dark previews appear together, one above the other.
 
-Choose Light → dark or Dark → light above the theme colors, adjust Background lightness, Contrast, and Chroma, then click Generate. Generation uses OKHCL lightness, preserves hue and alpha, and keeps the source mode's colors. Undo restores the previous stylesheet. Generator settings stay in browser storage and are included in Share links.
+Choose Light → dark or Dark → light above the theme colors, adjust Background lightness, Contrast, and Chroma, then click Generate. Surfaces use OKHCL lightness. Text colors derive contrast from their matching surfaces, with separate targets for body text, muted text, and button labels. Text tint is limited to keep accent saturation out of labels. Generation preserves hue, alpha, and the source mode's colors. Undo restores the previous stylesheet. Generator settings stay in browser storage and are included in Share links.
 
 The ZIP contains standalone `index.html` and `dark.html` demos, compiled `styles.css`, editable `theme.css`, and a rebuildable demo in `src/index.html`. Run `npm install && npm run build` in the extracted folder to rebuild the CSS after editing the theme.
 

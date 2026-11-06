@@ -1,4 +1,4 @@
-import { converter } from "culori";
+import { converter, toGamut, wcagContrast, type Rgb } from "culori";
 import { cssColor, type Color } from "./color";
 import type { ModeGeneration } from "./workspaceSchema";
 
@@ -12,6 +12,7 @@ type Declaration = {
 };
 type Block = { mode: Mode | null; end: number };
 const toOklch = converter("oklch");
+const toSrgb = toGamut("rgb", "oklch");
 export const defaultModeGeneration: ModeGeneration = {
   from: "light",
   background: 0.18,
@@ -19,6 +20,104 @@ export const defaultModeGeneration: ModeGeneration = {
   chroma: 0.85,
 };
 const clamp = (value: number, max = 1) => Math.max(0, Math.min(max, value));
+const isForeground = (name: string) =>
+  name === "--color-foreground" || name.endsWith("-foreground");
+
+function composite(rgb: Rgb, alpha: number, background: Rgb): Rgb {
+  return {
+    mode: "rgb",
+    r: rgb.r * alpha + background.r * (1 - alpha),
+    g: rgb.g * alpha + background.g * (1 - alpha),
+    b: rgb.b * alpha + background.b * (1 - alpha),
+  };
+}
+
+function rendered(color: Color, background: Rgb): Rgb {
+  return composite(toSrgb({ mode: "oklch", ...color }), color.a, background);
+}
+
+// Foregrounds may be reused on cards, and translucent fills expose that backing.
+function textBackgrounds(
+  name: string,
+  colors: ReadonlyMap<string, Color>,
+  fallback: Color,
+  dark: boolean,
+) {
+  const canvas = dark ? 0 : 1;
+  const background = rendered(colors.get("--color-background") ?? fallback, {
+    mode: "rgb",
+    r: canvas,
+    g: canvas,
+    b: canvas,
+  });
+  const backing = [background];
+  for (const surface of ["card", "popover", "sidebar"]) {
+    const color = colors.get(`--color-${surface}`);
+    if (color) backing.push(rendered(color, background));
+  }
+  if (name === "--color-foreground") return backing;
+  const surface = colors.get(name.replace(/-foreground$/, ""));
+  const surfaces = surface
+    ? backing.map((base) => rendered(surface, base))
+    : backing;
+  return name === "--color-muted-foreground"
+    ? [...backing, ...surfaces]
+    : surfaces;
+}
+
+function textContrast(color: Color, backgrounds: Rgb[]) {
+  const rgb = toSrgb({ mode: "oklch", ...color });
+  return Math.min(
+    ...backgrounds.map((background) =>
+      wcagContrast(composite(rgb, color.a, background), background),
+    ),
+  );
+}
+
+function deriveForeground(
+  name: string,
+  original: Color,
+  originals: ReadonlyMap<string, Color>,
+  generated: ReadonlyMap<string, Color>,
+  settings: ModeGeneration,
+) {
+  const fallback = {
+    l: settings.from === "light" ? 1 : 0.18,
+    c: 0,
+    h: 0,
+    a: 1,
+  };
+  const sourceRatio = textContrast(
+    original,
+    textBackgrounds(name, originals, fallback, settings.from === "dark"),
+  );
+  const backgrounds = textBackgrounds(
+    name,
+    generated,
+    { ...fallback, l: settings.background },
+    settings.from === "light",
+  );
+  const muted = name === "--color-muted-foreground";
+  const body = /^--color-(?:(?:card|popover|sidebar)-)?foreground$/.test(name);
+  const intent = Math.max(
+    body ? 7 : 4.5,
+    Math.min(muted ? 6 : body ? 12 : 7, sourceRatio),
+  );
+  const desired = Math.max(4.5, intent * settings.contrast) + 0.05;
+  const color = { ...original, c: clamp(original.c * settings.chroma, 0.03) };
+  const black = textContrast({ ...color, l: 0 }, backgrounds);
+  const white = textContrast({ ...color, l: 1 }, backgrounds);
+  let passing = white > black ? 1 : 0;
+  let failing = 1 - passing;
+  const achievable = Math.min(desired, Math.max(white, black));
+  // Search only lightness; keep the text's hue, restrained tint, and alpha.
+  for (let i = 0; i < 20; i++) {
+    const l = (passing + failing) / 2;
+    if (textContrast({ ...color, l }, backgrounds) >= achievable) passing = l;
+    else failing = l;
+  }
+  return { ...color, l: passing };
+}
 
 // Keep source ranges so generation only edits destination color declarations.
 export function readThemeColors(source: string) {
@@ -112,12 +211,14 @@ export function generateMode(source: string, settings: ModeGeneration) {
   };
   const sourceBackground =
     resolve("--color-background")?.l ?? (settings.from === "light" ? 1 : 0.18);
-  const colors = new Map<string, string>();
   const originals = new Map<string, Color>();
   for (const name of inputs.keys()) {
     const color = resolve(name);
-    if (!color) continue;
-    originals.set(name, color);
+    if (color) originals.set(name, color);
+  }
+  const generated = new Map<string, Color>();
+  for (const [name, color] of originals) {
+    if (isForeground(name)) continue;
     let l =
       settings.background + (sourceBackground - color.l) * settings.contrast;
     // Raised neutral surfaces stay above a dark background and below a light one.
@@ -127,15 +228,25 @@ export function generateMode(source: string, settings: ModeGeneration) {
         (target === "dark" ? 1 : -1) *
           Math.max(0.035, Math.abs(sourceBackground - color.l)) *
           settings.contrast;
-    colors.set(
-      name,
-      cssColor({
-        ...color,
-        l: clamp(l),
-        c: clamp(color.c * settings.chroma, 0.4),
-      }),
-    );
+    generated.set(name, {
+      ...color,
+      l: clamp(l),
+      c: clamp(color.c * settings.chroma, 0.4),
+    });
   }
+  for (const [name, color] of originals)
+    if (isForeground(name))
+      generated.set(
+        name,
+        deriveForeground(name, color, originals, generated, settings),
+      );
+  // Preserve declaration order so token selection and generated CSS stay stable.
+  const colors = new Map(
+    [...originals].map(
+      ([name, color]) =>
+        [name, cssColor(generated.get(name) ?? color)] as const,
+    ),
+  );
   if (!colors.size)
     throw new Error("No color tokens found in the source mode.");
 

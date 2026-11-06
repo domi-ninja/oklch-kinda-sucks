@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
-import { baseTokens, sourceFor } from "../src/demo";
-import { parseColor } from "../src/color";
+import { baseTokens, presets, sourceFor } from "../src/demo";
+import { parseColor, type Color } from "../src/color";
+import { toGamut, wcagContrast } from "culori";
 import {
   defaultModeGeneration,
   generateMode,
@@ -34,7 +35,8 @@ test("generation anchors lightness, retains hue and alpha, and raises surfaces",
   const dark = tokens(generated.source, "dark");
   expect(dark.background?.l).toBe(0.18);
   expect(dark.card?.l).toBe(0.215);
-  expect(dark.foreground?.l).toBe(0.955);
+  expect(dark.foreground!.l).toBeGreaterThan(dark["muted-foreground"]!.l);
+  expect(dark.foreground!.l).toBeGreaterThan(0.8);
   expect(dark.primary).toEqual({ l: 0.515, c: 0.136, h: 165, a: 0.6 });
   expect(generated.source).toContain("main { border-radius: 5px; }");
   expect(generated.count).toBe(Object.keys(baseTokens).length);
@@ -52,7 +54,9 @@ test("generation anchors lightness, retains hue and alpha, and raises surfaces",
     "dark",
   );
   expect(adjusted.background?.l).toBe(0.25);
-  expect(adjusted.foreground?.l).toBe(0.87);
+  expect(adjusted.foreground!.l).toBeGreaterThan(
+    adjusted["muted-foreground"]!.l,
+  );
   expect(adjusted.primary?.c).toBe(0.08);
 });
 
@@ -69,8 +73,179 @@ test("dark to light pins inherited colors without changing the dark theme", () =
   const light = tokens(generated, "light");
   expect(light.background?.l).toBe(0.985);
   expect(light.card?.l).toBe(0.935);
-  expect(light.foreground?.l).toBe(0.225);
+  expect(light.foreground!.l).toBeLessThan(light["muted-foreground"]!.l);
   expect(generateMode(generated, settings).source).toBe(generated);
+});
+
+test("foregrounds contrast with their surfaces across themes and directions while retaining text hierarchy", () => {
+  const rgb = toGamut("rgb", "oklch");
+  const ratio = (text: Color, surface: Color) =>
+    wcagContrast(
+      rgb({ mode: "oklch", ...text }),
+      rgb({ mode: "oklch", ...surface }),
+    );
+  for (const preset of presets) {
+    const source = sourceFor(preset.tokens, preset.extra);
+    for (const from of ["light", "dark"] as const) {
+      const target = from === "light" ? "dark" : "light";
+      const generated = tokens(
+        generateMode(source, {
+          ...defaultModeGeneration,
+          from,
+          background: target === "dark" ? 0.18 : 0.985,
+          chroma: 1.5,
+        }).source,
+        target,
+      );
+      for (const name of Object.keys(generated).filter(
+        (name) => name === "foreground" || name.endsWith("-foreground"),
+      )) {
+        const text = generated[name]!;
+        const surface =
+          generated[
+            name === "foreground"
+              ? "background"
+              : name.replace(/-foreground$/, "")
+          ]!;
+        expect(
+          ratio(text, surface),
+          `${preset.id} ${target} ${name}`,
+        ).toBeGreaterThanOrEqual(4.49);
+        expect(text.c).toBeLessThanOrEqual(0.03);
+      }
+      expect(
+        ratio(generated.foreground!, generated.background!),
+      ).toBeGreaterThan(
+        ratio(generated["muted-foreground"]!, generated.background!),
+      );
+    }
+  }
+  const source = sourceFor(baseTokens, "");
+  const low = tokens(
+    generateMode(source, { ...defaultModeGeneration, contrast: 0.5 }).source,
+    "dark",
+  );
+  const high = tokens(
+    generateMode(source, { ...defaultModeGeneration, contrast: 1.5 }).source,
+    "dark",
+  );
+  expect(ratio(high.foreground!, high.background!)).toBeGreaterThan(
+    ratio(low.foreground!, low.background!) + 2,
+  );
+});
+
+test("text chooses its polarity from each surface, restrains tint and retains transparency", () => {
+  const source = sourceFor(
+    {
+      ...baseTokens,
+      foreground: "oklch(0.21 0.2 260)",
+      "primary-foreground": "oklch(1 0 40)",
+    },
+    "",
+  );
+  const dark = tokens(
+    generateMode(source, defaultModeGeneration).source,
+    "dark",
+  );
+  expect(dark["primary-foreground"]!.l).toBeGreaterThan(dark.primary!.l);
+  expect(dark.foreground!.c).toBe(0.03);
+  expect(dark.foreground!.h).toBe(260);
+  const bright = tokens(
+    generateMode(source, { ...defaultModeGeneration, background: 0.9 }).source,
+    "dark",
+  );
+  expect(bright.foreground!.l).toBeLessThan(0.4);
+  const translucent = sourceFor(
+    { ...baseTokens, "primary-foreground": "oklch(0.2 0.02 45 / 60%)" },
+    "",
+  );
+  expect(
+    tokens(generateMode(translucent, defaultModeGeneration).source, "dark")[
+      "primary-foreground"
+    ]!.a,
+  ).toBe(0.6);
+});
+
+test("rendered body text, muted text and labels remain readable in light and dark previews", async ({
+  page,
+}) => {
+  await page.goto("/");
+  page.on("dialog", (dialog) => dialog.accept());
+  for (const preset of presets) {
+    await page.getByLabel("Preset", { exact: true }).selectOption(preset.id);
+    for (const from of ["light", "dark"]) {
+      const target = from === "light" ? "dark" : "light";
+      await page
+        .getByLabel("Generate mode direction", { exact: true })
+        .selectOption(from);
+      await page
+        .getByRole("button", { name: `Generate ${target} mode`, exact: true })
+        .click();
+      await expect(
+        page.getByRole("button", { name: "Export app", exact: true }),
+      ).toBeEnabled();
+      const frame = page.frameLocator(
+        `iframe[title="shadcn/ui ${target} preview"]`,
+      );
+      const contrasts = await frame.locator("main").evaluate((main) => {
+        const canvas = document.createElement("canvas");
+        canvas.width = 2;
+        canvas.height = 1;
+        const context = canvas.getContext("2d", {
+          colorSpace: "srgb",
+          willReadFrequently: true,
+        })!;
+        const luminance = (rgb: number[]) =>
+          rgb
+            .map((value) => {
+              const channel = value / 255;
+              return channel <= 0.04045
+                ? channel / 12.92
+                : ((channel + 0.055) / 1.055) ** 2.4;
+            })
+            .reduce(
+              (sum, value, index) =>
+                sum + value * [0.2126, 0.7152, 0.0722][index],
+              0,
+            );
+        return ["main", "#project", "#remove", "#status", "header > span"].map(
+          (selector) => {
+            const element =
+              selector === "main" ? main : main.querySelector(selector)!;
+            const ancestors: Element[] = [];
+            for (
+              let parent: Element | null = element;
+              parent;
+              parent = parent.parentElement
+            )
+              ancestors.unshift(parent);
+            context.fillStyle = "white";
+            context.fillRect(0, 0, 2, 1);
+            for (const parent of ancestors) {
+              context.fillStyle = getComputedStyle(parent).backgroundColor;
+              context.fillRect(0, 0, 2, 1);
+            }
+            context.fillStyle = getComputedStyle(element).color;
+            context.fillRect(1, 0, 1, 1);
+            const values = Array.from(context.getImageData(0, 0, 2, 1).data);
+            const background = luminance(values.slice(0, 3));
+            const text = luminance(values.slice(4, 7));
+            return {
+              selector,
+              ratio:
+                (Math.max(text, background) + 0.05) /
+                (Math.min(text, background) + 0.05),
+            };
+          },
+        );
+      });
+      for (const { selector, ratio } of contrasts)
+        expect(
+          ratio,
+          `${preset.id} ${target} ${selector}`,
+        ).toBeGreaterThanOrEqual(selector === "main" ? 7 : 4.45);
+    }
+  }
 });
 
 test("generation preserves unrelated CSS and handles aliases, literals, missing blocks and invalid expressions", () => {
