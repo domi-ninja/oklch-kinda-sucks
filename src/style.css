@@ -778,3 +778,24 @@ select {
     gap: 8px;
   }
 }
+
+.preview-connections {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 50;
+}
+.preview-outline-back {
+  stroke: #202020;
+  stroke-width: 4;
+}
+.preview-outline {
+  stroke: #f59e0b;
+  stroke-width: 2;
+}
+.token[data-preview-highlight] {
+  outline: 2px solid #f59e0b;
+  outline-offset: -2px;
+}

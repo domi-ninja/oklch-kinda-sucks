@@ -2,6 +2,8 @@
 
 Open [color.domi.ninja](https://color.domi.ninja), choose a preset, and click one of its colors. Adjust it with a picker or edit its CSS value. Light and dark previews update together.
 
+Hover an element in either preview to outline it and connect its colors to the matching theme swatches. Keyboard focus does the same for preview controls.
+
 ## Pickers and color fields
 
 Add picker opens another synchronized RGB, HSL, HCL, or OKHCL picker. Each has three planes covering every pair of color channels while holding the third at its current value. HCL uses CIELCH D50; OKHCL uses OKLCH. RGB and HSL describe the browser's sRGB result.

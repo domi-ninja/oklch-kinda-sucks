@@ -20,6 +20,7 @@ import { ColorEditors } from "./ColorEditors";
 import { ColorSwatches } from "./ColorSwatches";
 import { useAppUpdate } from "./useAppUpdate";
 import { PreviewFrame } from "./PreviewFrame";
+import { PreviewConnections } from "./PreviewConnections";
 import {
   cssColor,
   parseColor,
@@ -601,6 +602,7 @@ export function App({ shared }: { shared?: PresetShare }) {
                     <button
                       key={i}
                       title={entry.name}
+                      data-theme-token={entry.name}
                       className={`token ${selected === i ? "selected" : ""}`}
                       onClick={() => {
                         const next = parseColor(entry.value);
@@ -764,6 +766,7 @@ export function App({ shared }: { shared?: PresetShare }) {
           </div>
         </section>
       </main>
+      <PreviewConnections />
     </>
   );
 }

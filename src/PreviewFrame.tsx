@@ -32,6 +32,7 @@ export function PreviewFrame({
   return (
     <iframe
       ref={frame}
+      data-preview-mode={dark ? "dark" : "light"}
       title={`shadcn/ui ${dark ? "dark" : "light"} preview`}
       sandbox="allow-scripts"
       srcDoc={document}
