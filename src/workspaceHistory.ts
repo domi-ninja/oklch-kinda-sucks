@@ -54,6 +54,7 @@ function isEdit(a: Workspace, b: Workspace) {
       !b.palette ||
       !sameColor(a.palette.end, b.palette.end) ||
       !sameFields(a.palette.middle, b.palette.middle) ||
+      a.palette.theme !== b.palette.theme ||
       a.palette.mode !== b.palette.mode ||
       a.palette.subdivisions !== b.palette.subdivisions);
   return (

@@ -11,6 +11,14 @@ export const colorSchema = z
 export const pickerModes = ["RGB", "HSL", "HCL", "OKHCL"] as const;
 export type PickerMode = (typeof pickerModes)[number];
 export const palettePoints = ["start", "middle", "end"] as const;
+export const paletteThemeSchema = z.object({
+  chroma: z.number().min(0).max(3),
+  positions: z.object({
+    light: z.record(z.string(), z.number().min(0).max(1)),
+    dark: z.record(z.string(), z.number().min(0).max(1)),
+  }),
+});
+export type PaletteThemeSettings = z.infer<typeof paletteThemeSchema>;
 export const paletteSchema = z
   .object({
     end: colorSchema,
@@ -18,6 +26,7 @@ export const paletteSchema = z
     endpoint: z.enum(palettePoints),
     subdivisions: z.number().int().min(1).max(64),
     mode: z.enum(pickerModes),
+    theme: paletteThemeSchema.optional(),
   })
   .refine(
     (palette) => palette.endpoint !== "middle" || !!palette.middle,

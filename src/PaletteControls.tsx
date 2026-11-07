@@ -5,6 +5,7 @@ import { NumericInput } from "./NumericInput";
 import { checkerColors, cssColor, type Color } from "./color";
 import { PaletteRows } from "./PaletteRows";
 import { useHarmonizedPalette } from "./useHarmonizedPalette";
+import { defaultPaletteTheme } from "./paletteHarmonizer";
 import { paletteLabels } from "./palette";
 import type {
   HarmonizedPalettes,
@@ -36,7 +37,9 @@ export function PaletteControls({
   palette: Palette;
   colors: Color[];
   path: Color[];
-  onChange: (patch: Partial<Pick<Palette, "mode" | "subdivisions">>) => void;
+  onChange: (
+    patch: Partial<Pick<Palette, "mode" | "subdivisions" | "theme">>,
+  ) => void;
   onSelect: (endpoint: PaletteEndpoint) => void;
   onToggleMiddle: () => void;
   onClose: () => void;
@@ -46,7 +49,7 @@ export function PaletteControls({
   onPreviewChange: (palettes: HarmonizedPalettes | null) => void;
 }) {
   const brightnessFilter = useId();
-  const harmony = useHarmonizedPalette(colors, path);
+  const harmony = useHarmonizedPalette(colors, path, palette.theme);
   const [applyError, setApplyError] = useState("");
   const [hovered, setHovered] = useState(false);
   useLayoutEffect(
@@ -58,6 +61,7 @@ export function PaletteControls({
     },
     [hovered, harmony.palette, harmony.error, onPreviewChange],
   );
+  const settings = palette.theme ?? defaultPaletteTheme;
   return (
     <section
       className="panel palette-panel"
@@ -139,6 +143,22 @@ export function PaletteControls({
             </select>
           </label>
         </div>
+        <label className="palette-chroma">
+          Chroma <output>{Math.round(settings.chroma * 100)}%</output>
+          <input
+            type="range"
+            aria-label="Palette chroma"
+            min="0"
+            max="3"
+            step="0.01"
+            value={settings.chroma}
+            onChange={(event) =>
+              onChange({
+                theme: { ...settings, chroma: Number(event.target.value) },
+              })
+            }
+          />
+        </label>
         <div
           className="palette-scales"
           style={
@@ -192,6 +212,7 @@ export function PaletteControls({
                       Harmonized {mode}
                       {harmony.pending ? " · generating…" : ""}
                     </span>
+
                     <PaletteRows
                       colors={
                         generated?.length === colors.length ? generated : colors
@@ -215,6 +236,64 @@ export function PaletteControls({
               {harmony.error || applyError}
             </span>
           )}
+        </div>
+        <div className="palette-position-settings">
+          {(["light", "dark"] as const).map((mode) => (
+            <details key={mode} className="palette-token-positions">
+              <summary>
+                {mode === "light" ? "Light" : "Dark"} token positions
+              </summary>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() =>
+                  onChange({
+                    theme: {
+                      ...settings,
+                      positions: { ...settings.positions, [mode]: {} },
+                    },
+                  })
+                }
+              >
+                Reset positions
+              </Button>
+              {Object.entries(harmony.palette?.[mode].positions ?? {}).map(
+                ([role, position]) => (
+                  <label className="palette-token-position" key={role}>
+                    <span>{role}</span>
+                    <output>
+                      {Math.round(
+                        (settings.positions[mode][role] ?? position) * 100,
+                      )}
+                      %
+                    </output>
+                    <input
+                      type="range"
+                      aria-label={`${mode} ${role} position`}
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      value={settings.positions[mode][role] ?? position}
+                      onChange={(event) =>
+                        onChange({
+                          theme: {
+                            ...settings,
+                            positions: {
+                              ...settings.positions,
+                              [mode]: {
+                                ...settings.positions[mode],
+                                [role]: Number(event.target.value),
+                              },
+                            },
+                          },
+                        })
+                      }
+                    />
+                  </label>
+                ),
+              )}
+            </details>
+          ))}
         </div>
         <div className="palette-actions">
           <span>{colors.length} colors</span>

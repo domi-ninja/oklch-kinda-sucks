@@ -20,11 +20,65 @@ const example = ["#a9ffeb", "#aacd85", "#ac8a39", "#944929", "#631436"].map(
 const rendered = (color: Color) =>
   formatCss(p3({ mode: "oklch", l: color.l, c: color.c, h: color.h }));
 
+test("chroma can be boosted and token positions sample the same direction in both modes", () => {
+  const normal = harmonizePalette(example);
+  const vivid = harmonizePalette(example, example, {
+    chroma: 2,
+    positions: { light: { ring: 0.75 }, dark: { card: 0.25 } },
+  });
+  expect(vivid.light.tokens.background.c).toBeGreaterThan(
+    normal.light.tokens.background.c,
+  );
+  expect(vivid.light.tokens.ring.h).toBeCloseTo(example[3].h, 4);
+  expect(vivid.dark.tokens.card.h).toBeCloseTo(example[1].h, 4);
+  normal.light.colors.forEach((color, index) =>
+    expect(normal.dark.colors[index].h).toBeCloseTo(color.h, 4),
+  );
+});
+
 function foreground(color: Color) {
   expect([0, 1]).toContain(color.l);
   expect(color.c).toBe(0);
   expect(color.a).toBe(1);
 }
+
+test("chroma and token ratio controls persist, reset, and undo", async ({
+  page,
+}) => {
+  await page.goto("/#color=0.8,0.15,90,1&pickers=OKHCL");
+  await page
+    .getByRole("button", { name: "Create palette", exact: true })
+    .click();
+  const apply = page.getByRole("button", {
+    name: "Apply palette to preset",
+    exact: true,
+  });
+  await expect(apply).toBeEnabled();
+  await page
+    .getByRole("slider", { name: "Palette chroma", exact: true })
+    .fill("2");
+  const group = page.locator(".palette-token-positions").first();
+  await group.locator("summary").click();
+  const ratio = page.getByRole("slider", {
+    name: "light primary position",
+    exact: true,
+  });
+  await ratio.fill("0.7");
+  await expect(apply).toBeEnabled();
+  await page.reload();
+  await expect(
+    page.getByRole("slider", { name: "Palette chroma", exact: true }),
+  ).toHaveValue("2");
+  await expect(apply).toBeEnabled();
+  await group.locator("summary").click();
+  await expect(ratio).toHaveValue("0.7");
+  await group
+    .getByRole("button", { name: "Reset positions", exact: true })
+    .click();
+  await expect(ratio).toHaveValue("0.5");
+  await page.getByRole("button", { name: "Undo", exact: true }).click();
+  await expect(ratio).toHaveValue("0.7");
+});
 
 test("the supplied gradient produces distinct light/dark theme roles with pure black/white text", () => {
   const result = harmonizePalette(example);
@@ -41,7 +95,11 @@ test("the supplied gradient produces distinct light/dark theme roles with pure b
     expect(contrasts[2]).toBeCloseTo(72, 1);
     expect(
       contrasts.every(
-        (value, index) => index === 0 || value >= contrasts[index - 1],
+        (value, index) =>
+          index === 0 ||
+          (mode === "light"
+            ? value >= contrasts[index - 1]
+            : value <= contrasts[index - 1]),
       ),
     ).toBe(true);
     for (const [role, index] of [

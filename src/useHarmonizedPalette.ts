@@ -1,11 +1,22 @@
 import { useEffect, useRef, useState } from "react";
 import type { Color } from "./color";
+import { defaultPaletteTheme } from "./paletteHarmonizer";
+import type { PaletteThemeSettings } from "./workspaceSchema";
 import type { HarmonizedPalettes } from "./paletteHarmonizer";
 
-type Job = { id: number; colors: Color[]; path: Color[] };
+type Job = {
+  id: number;
+  colors: Color[];
+  path: Color[];
+  settings: PaletteThemeSettings;
+};
 type Reply = { id: number; palette?: HarmonizedPalettes; error?: string };
 
-export function useHarmonizedPalette(colors: Color[], path: Color[]) {
+export function useHarmonizedPalette(
+  colors: Color[],
+  path: Color[],
+  settings = defaultPaletteTheme,
+) {
   const worker = useRef<Worker | null>(null);
   const busy = useRef(false);
   const queued = useRef<Job | null>(null);
@@ -14,6 +25,7 @@ export function useHarmonizedPalette(colors: Color[], path: Color[]) {
   const [result, setResult] = useState<{
     source: Color[];
     path: Color[];
+    settings: PaletteThemeSettings;
     palette?: HarmonizedPalettes;
     error?: string;
   } | null>(null);
@@ -42,6 +54,7 @@ export function useHarmonizedPalette(colors: Color[], path: Color[]) {
         setResult({
           source: job.colors,
           path: job.path,
+          settings: job.settings,
           palette: event.data.palette,
           error: event.data.error,
         });
@@ -54,6 +67,7 @@ export function useHarmonizedPalette(colors: Color[], path: Color[]) {
         setResult({
           source: job.colors,
           path: job.path,
+          settings: job.settings,
           error: "Could not harmonize the palette.",
         });
     };
@@ -67,19 +81,24 @@ export function useHarmonizedPalette(colors: Color[], path: Color[]) {
 
   useEffect(
     function harmonizePaletteChanges() {
-      const job = { id: ++sequence.current, colors, path };
+      const job = { id: ++sequence.current, colors, path, settings };
       latest.current = job;
       if (busy.current) queued.current = job;
       else send(job);
     },
-    [colors, path],
+    [colors, path, settings],
   );
 
   return {
     palette: result?.palette,
-    pending: result?.source !== colors || result?.path !== path,
+    pending:
+      result?.source !== colors ||
+      result?.path !== path ||
+      result?.settings !== settings,
     error:
-      result?.source === colors && result.path === path
+      result?.source === colors &&
+      result.path === path &&
+      result.settings === settings
         ? result.error
         : undefined,
   };

@@ -235,6 +235,34 @@ h2 {
   display: grid;
   gap: 4px;
 }
+.palette-chroma,
+.palette-token-position {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px;
+}
+.palette-chroma input,
+.palette-token-position input {
+  grid-column: 1 / -1;
+  width: 100%;
+  min-height: 24px;
+}
+.palette-token-position span {
+  overflow-wrap: anywhere;
+}
+.palette-token-positions summary {
+  cursor: pointer;
+  padding: 8px 0;
+}
+.palette-token-positions[open] {
+  display: grid;
+  gap: 8px;
+}
+.palette-position-settings {
+  display: grid;
+  gap: 8px;
+  padding: 0 16px 16px;
+}
 .palette-strip {
   display: grid;
   overflow: hidden;
@@ -733,6 +761,10 @@ select {
 }
 
 @media (max-width: 760px) {
+  .palette-chroma input,
+  .palette-token-position input {
+    min-height: 44px;
+  }
   .workspace {
     --workspace-inset: 16px;
     overflow-x: visible;

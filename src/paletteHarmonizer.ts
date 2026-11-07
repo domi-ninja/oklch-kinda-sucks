@@ -1,5 +1,6 @@
 import { converter, toGamut } from "culori";
 import { APCAcontrast, displayP3toY } from "apca-w3";
+import type { PaletteThemeSettings } from "./workspaceSchema";
 import type { Color } from "./color";
 import { clampColor } from "./colorBounds";
 import { interpolateCoordinates } from "./palette";
@@ -56,7 +57,16 @@ function solve(color: Color, target: number, background: Background) {
 }
 
 // Source order is light to dark. Sample its hue/chroma path before retuning lightness for each mode.
-export function harmonizePalette(input: Color[], path = input) {
+export const defaultPaletteTheme: PaletteThemeSettings = {
+  chroma: 1,
+  positions: { light: {}, dark: {} },
+};
+
+export function harmonizePalette(
+  input: Color[],
+  path = input,
+  settings = defaultPaletteTheme,
+) {
   const source = path.length ? path.map(clampColor) : [white, black];
   const seed = (t: number): Color => {
     const position = t * (source.length - 1);
@@ -69,22 +79,18 @@ export function harmonizePalette(input: Color[], path = input) {
       "OKHCL",
       position - index,
     );
-    return { h, c, l, a: 1 };
+    return { h, c: c * settings.chroma, l, a: 1 };
   };
   function generate(mode: ThemeMode) {
     const dark = mode === "dark";
     const background: Background = dark ? "black" : "white";
-    const at = (t: number) => seed(dark ? 1 - t : t);
-    const first = fit({
-      ...at(0),
-      l: dark ? 0.18 : 0.985,
-      c: Math.min(at(0).c, dark ? 0.018 : 0.008),
+    const at = seed;
+    const surface = (color: Color, cap: number) => ({
+      ...color,
+      c: Math.min(color.c, cap + Math.max(0, settings.chroma - 1) * 0.4),
     });
-    const last = fit({
-      ...at(1),
-      l: dark ? 0.985 : 0.18,
-      c: Math.min(at(1).c, dark ? 0.008 : 0.018),
-    });
+    const first = fit({ ...surface(at(0), 0.008), l: 0.985 });
+    const last = fit({ ...surface(at(1), 0.018), l: 0.18 });
     const from = contrast(first, background);
     const to = contrast(last, background);
     // Give the primary midpoint strong contrast, with a separate progression on either side.
@@ -98,65 +104,73 @@ export function harmonizePalette(input: Color[], path = input) {
           : middle + (to - middle) * (t - 0.5) * 2;
       return solve(at(t), target, background);
     };
-    const card = fit({
-      ...first,
-      l: Math.min(1, first.l + (dark ? 0.04 : 0.012)),
-      c: Math.min(first.c, 0.012),
-    });
-    const mutedSeed = at(0.1);
-    const muted = solve(
-      { ...mutedSeed, c: Math.min(mutedSeed.c, 0.02) },
-      dark ? 96 : 92,
-      dark ? "white" : "black",
-    );
-    const border = fit({
-      ...at(0.15),
-      l: first.l + (dark ? 0.16 : -0.12),
-      c: Math.min(at(0.15).c, 0.02),
-    });
-    const positions = {
-      background: 0,
-      secondary: dark ? 0.75 : 0.25,
+    const positions: Record<string, number> = {
+      background: dark ? 1 : 0,
+      card: dark ? 0.97 : 0.02,
+      popover: dark ? 0.97 : 0.02,
       primary: 0.5,
-      accent: dark ? 0.25 : 0.75,
+      secondary: 0.25,
+      accent: 0.75,
+      muted: dark ? 0.93 : 0.07,
+      border: dark ? 0.85 : 0.15,
+      input: dark ? 0.85 : 0.15,
+      ring: 0.5,
+      sidebar: dark ? 0.97 : 0.02,
+      "sidebar-primary": 0.5,
+      "sidebar-accent": 0.75,
+      "sidebar-border": dark ? 0.85 : 0.15,
+      "sidebar-ring": 0.5,
     };
-    const primary = colorAt(positions.primary);
-    const secondary = colorAt(positions.secondary);
-    const accent = colorAt(positions.accent);
-    const foreground = dark ? white : black;
-    const tokens: Record<string, Color> = {
-      background: first,
-      foreground,
-      card,
-      "card-foreground": foreground,
-      popover: card,
-      "popover-foreground": foreground,
-      primary,
-      "primary-foreground": themeInk(primary),
-      secondary,
-      "secondary-foreground": themeInk(secondary),
-      accent,
-      "accent-foreground": themeInk(accent),
-      muted,
-      "muted-foreground": foreground,
-      border,
-      input: border,
-      ring: primary,
-      sidebar: card,
-      "sidebar-foreground": foreground,
-      "sidebar-primary": primary,
-      "sidebar-primary-foreground": themeInk(primary),
-      "sidebar-accent": accent,
-      "sidebar-accent-foreground": themeInk(accent),
-      "sidebar-border": border,
-      "sidebar-ring": primary,
-    };
+    const tokens: Record<string, Color> = {};
+    for (const [role, fallback] of Object.entries(positions)) {
+      positions[role] = settings.positions[mode][role] ?? fallback;
+      const sample = colorAt(positions[role]);
+      tokens[role] = [
+        "background",
+        "card",
+        "popover",
+        "muted",
+        "border",
+        "input",
+        "sidebar",
+        "sidebar-border",
+      ].includes(role)
+        ? fit(surface(sample, role === "background" ? 0.018 : 0.025))
+        : sample;
+    }
+    for (const role of [
+      "foreground",
+      "card-foreground",
+      "popover-foreground",
+      "primary-foreground",
+      "secondary-foreground",
+      "accent-foreground",
+      "muted-foreground",
+      "sidebar-foreground",
+      "sidebar-primary-foreground",
+      "sidebar-accent-foreground",
+    ]) {
+      const fill =
+        role === "foreground" ? "background" : role.replace(/-foreground$/, "");
+      const chosen = settings.positions[mode][role];
+      tokens[role] =
+        chosen === undefined
+          ? themeInk(tokens[fill])
+          : colorAt(chosen).l >= 0.5
+            ? white
+            : black;
+      positions[role] = chosen ?? (tokens[role].l === 1 ? 0 : 1);
+    }
     return {
       colors: input.map((_, index) =>
         colorAt(index / Math.max(1, input.length - 1)),
       ),
       tokens,
+      positions,
       picks: Object.entries(positions)
+        .filter(([role]) =>
+          ["background", "primary", "secondary", "accent"].includes(role),
+        )
         .map(([role, position]) => ({ role, position, color: tokens[role] }))
         .sort((a, b) => a.position - b.position),
     };

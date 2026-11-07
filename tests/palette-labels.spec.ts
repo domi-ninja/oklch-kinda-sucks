@@ -55,11 +55,11 @@ test("harmonized role labels identify the exact colors applied in both modes at 
     const { declarations } = readThemeColors(source);
     for (const [index, mode] of (["light", "dark"] as const).entries()) {
       const group = page.locator(".palette-mode-rows").nth(index);
-      await expect(group.locator(".palette-role")).toHaveText(
-        mode === "light"
-          ? ["Background", "Secondary", "Primary", "Accent"]
-          : ["Background", "Accent", "Primary", "Secondary"],
-      );
+      expect(
+        (await group.locator(".palette-role").allTextContents())
+          .map((value) => value.trim())
+          .sort(),
+      ).toEqual(["Accent", "Background", "Primary", "Secondary"]);
       await expect(
         page
           .getByRole("list", { name: `Harmonized ${mode} colors`, exact: true })

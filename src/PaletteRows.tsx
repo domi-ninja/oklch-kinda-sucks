@@ -51,7 +51,10 @@ export function PaletteRows({
     [colors, picks, displayColorSpace],
   );
   const extraPicks = picks.filter(
-    (pick) => !Number.isInteger(pick.position * (colors.length - 1)),
+    (pick) =>
+      !Number.isInteger(pick.position * (colors.length - 1)) ||
+      cssColor(pick.color) !==
+        cssColor(colors[pick.position * (colors.length - 1)]),
   );
   return (
     <>
@@ -76,7 +79,9 @@ export function PaletteRows({
         >
           {colors.map((color, index) => {
             const role = picks.find(
-              (pick) => pick.position * (colors.length - 1) === index,
+              (pick) =>
+                pick.position * (colors.length - 1) === index &&
+                cssColor(pick.color) === cssColor(color),
             )?.role;
             return (
               <li
