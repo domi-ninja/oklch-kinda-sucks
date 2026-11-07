@@ -455,10 +455,6 @@ select {
   background: #bcbcbc;
   color: #202020;
 }
-.token-list {
-  max-height: 782px;
-  overflow: auto;
-}
 .mode-generator {
   display: grid;
   gap: 16px;
@@ -854,9 +850,6 @@ select {
   .token-pair .token-name {
     white-space: normal;
     overflow: visible;
-  }
-  .token-list {
-    max-height: none;
   }
 }
 
