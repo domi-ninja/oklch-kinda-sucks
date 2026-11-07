@@ -145,7 +145,9 @@ test("middle control edits bend the ramp, undo cleanly and survive reload", asyn
     page.getByRole("button", { name: "Middle", exact: true }),
   ).toHaveAttribute("aria-pressed", "true");
   expect((await workspace(page)).palette).toEqual(curved.palette);
-  expect(new URL(page.url()).hash).toBe("#color=0.9,0.3,50,0.9&pickers=OKHCL");
+  expect(
+    new URLSearchParams(new URL(page.url()).hash.slice(1)).get("color"),
+  ).toBe("0.9,0.3,50,0.9");
 });
 
 test("middle handles support dragging and keyboard editing in every picker and fit on phones", async ({

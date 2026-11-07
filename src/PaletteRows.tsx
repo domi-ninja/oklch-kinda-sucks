@@ -7,138 +7,77 @@ import {
   type Color,
 } from "./color";
 import { paletteTextColor, useDisplayColorSpace } from "./paletteContrast";
-import type { ThemeMode, ThemePalette } from "./paletteHarmonizer";
-
-const noPicks: ThemePalette["picks"] = [];
+import type { ThemeMode } from "./paletteHarmonizer";
 
 export function PaletteRows({
   colors,
   variant,
-  hideRoles = false,
-  picks = noPicks,
   brightnessFilter,
   pending = false,
 }: {
   colors: Color[];
   variant?: ThemeMode;
-  hideRoles?: boolean;
-  picks?: ThemePalette["picks"];
   brightnessFilter: string;
   pending?: boolean;
 }) {
-  const displayColorSpace = useDisplayColorSpace();
+  const space = useDisplayColorSpace();
   const labels = useMemo(
     () =>
-      [...colors, ...picks.map((pick) => pick.color)].map((color) => {
-        const css = cssColor(color);
-        const sample = sampleColor(css);
+      colors.map((color) => {
+        const css = cssColor(color),
+          sample = sampleColor(css);
         const backgrounds =
           color.a < 1
             ? Object.values(checkerColors).map((background) =>
-                sampleChannels(css, background, displayColorSpace),
+                sampleChannels(css, background, space),
               )
             : [
-                displayColorSpace === "srgb"
+                space === "srgb"
                   ? sample
-                  : sampleChannels(css, undefined, displayColorSpace),
+                  : sampleChannels(css, undefined, space),
               ];
         return {
           hex: sample.hex,
-          color: paletteTextColor(
-            backgrounds.map((background) => background.channels),
+          ink: paletteTextColor(
+            backgrounds.map((bg) => bg.channels),
             backgrounds[0].colorSpace,
           ),
         };
       }),
-    [colors, picks, displayColorSpace],
-  );
-  const extraPicks = picks.filter(
-    (pick) =>
-      !Number.isInteger(pick.position * (colors.length - 1)) ||
-      cssColor(pick.color) !==
-        cssColor(colors[pick.position * (colors.length - 1)]),
+    [colors, space],
   );
   return (
-    <>
-      {[false, true].map((brightness) => (
-        <ol
-          key={String(brightness)}
-          className={`palette-strip${brightness ? " palette-brightness" : picks.length && !hideRoles ? " palette-with-roles" : ""}`}
-          aria-label={
-            brightness
-              ? variant
-                ? `Harmonized ${variant} brightness`
-                : "Perceived brightness"
-              : variant
-                ? `Harmonized ${variant} colors`
-                : "Palette colors"
-          }
-          aria-busy={pending}
-          style={{
-            gridTemplateColumns: `repeat(${colors.length}, minmax(0, 1fr))`,
-            filter: brightness ? `url(#${brightnessFilter})` : undefined,
-          }}
+    <ol
+      className="palette-strip"
+      aria-label={variant ? `Harmonized ${variant} colors` : "Palette colors"}
+      aria-busy={pending}
+    >
+      {colors.map((color, index) => (
+        <li
+          key={index}
+          aria-label={`Color ${index + 1}: ${cssColor(color)}`}
+          title={cssColor(color)}
         >
-          {colors.map((color, index) => {
-            const role = picks.find(
-              (pick) =>
-                pick.position * (colors.length - 1) === index &&
-                cssColor(pick.color) === cssColor(color),
-            )?.role;
-            return (
-              <li
-                key={index}
-                className="checker"
-                title={`${role ? `${role}: ` : ""}${cssColor(color)}`}
-                aria-label={`${brightness ? "Brightness of color" : "Color"} ${index + 1}${role ? ` (${role})` : ""}${brightness ? "" : `: ${cssColor(color)}`}`}
-              >
-                <span style={{ background: cssColor(color) }} />
-                {!brightness && (
-                  <>
-                    <code
-                      className="palette-hex"
-                      style={{ color: labels[index].color }}
-                      title={`sRGB ${labels[index].hex}`}
-                    >
-                      {labels[index].hex}
-                    </code>
-                    {role && !hideRoles && (
-                      <span
-                        className="palette-role"
-                        style={{ color: labels[index].color }}
-                      >
-                        {role[0].toUpperCase() + role.slice(1)}
-                      </span>
-                    )}
-                  </>
-                )}
-              </li>
-            );
-          })}
-        </ol>
+          <div className="palette-cell-color checker">
+            <span style={{ background: cssColor(color) }} />
+            <code
+              className="palette-hex"
+              style={{ color: labels[index].ink }}
+              title={`sRGB ${labels[index].hex}`}
+            >
+              {labels[index].hex}
+            </code>
+          </div>
+          <div
+            className="palette-cell-brightness checker"
+            role="img"
+            aria-label={`Brightness of color ${index + 1}`}
+            style={{ filter: `url(#${brightnessFilter})` }}
+          >
+            <span style={{ background: cssColor(color) }} />
+          </div>
+        </li>
       ))}
-      {extraPicks.length > 0 && !hideRoles && (
-        <ul
-          className="palette-extra-picks"
-          aria-label={`Harmonized ${variant} additional samples`}
-        >
-          {extraPicks.map((pick) => {
-            const label = labels[colors.length + picks.indexOf(pick)];
-            return (
-              <li
-                key={pick.role}
-                title={cssColor(pick.color)}
-                style={{ background: cssColor(pick.color), color: label.color }}
-              >
-                <code>{label.hex}</code>
-                <span className="palette-role">
-                  {pick.role[0].toUpperCase() + pick.role.slice(1)}
-                </span>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-    </>
+    </ol>
   );
 }

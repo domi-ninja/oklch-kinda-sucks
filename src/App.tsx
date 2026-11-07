@@ -1,4 +1,4 @@
-import { lazy, Suspense, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ArrowDownToLine,
   Plus,
@@ -27,7 +27,6 @@ import { ColorSwatches } from "./ColorSwatches";
 import { useAppUpdate } from "./useAppUpdate";
 import { PreviewFrame } from "./PreviewFrame";
 import { PreviewConnections } from "./PreviewConnections";
-import { defaultHarmonizerSettings } from "./harmonizerSettings";
 import {
   cssColor,
   parseColor,
@@ -53,7 +52,6 @@ import {
   normalizePresets,
   type Saved,
 } from "./presets";
-const Harmonizer = lazy(() => import("./Harmonizer"));
 function loadPresets(): Saved[] {
   try {
     const saved: unknown = JSON.parse(
@@ -114,18 +112,8 @@ type PresetShareResult = { active: string; name: string; source: string } & (
   | { status: "error"; message: string }
 );
 export function App({ shared }: { shared?: PresetShare }) {
-  const {
-    state,
-    set,
-    setColor,
-    updateState,
-    editWorkspace,
-    historyGroup,
-    undo,
-    redo,
-    canUndo,
-    canRedo,
-  } = useWorkspace(initialWorkspace, shared);
+  const { state, set, setColor, updateState, undo, redo, canUndo, canRedo } =
+    useWorkspace(initialWorkspace, shared);
   const {
     saved,
     active,
@@ -158,10 +146,6 @@ export function App({ shared }: { shared?: PresetShare }) {
     ],
   );
   const [message, setMessage] = useState("");
-  const [harmonizerView, setHarmonizerView] = useState<
-    "unopened" | "open" | "closed"
-  >("unopened");
-  const harmonizerTrigger = useRef<HTMLButtonElement>(null);
   const updateAvailable = useAppUpdate();
   const [sharing, setSharing] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -171,14 +155,29 @@ export function App({ shared }: { shared?: PresetShare }) {
   const compiled = useCompiler(source);
   const [previewPalette, setPreviewPalette] =
     useState<HarmonizedPalettes | null>(null);
+  const [palettePreviewActive, setPalettePreviewActive] = useState(
+    !!palette && !shared,
+  );
+  useEffect(function activatePaletteUrlNavigation() {
+    const restore = () =>
+      setPalettePreviewActive(
+        new URLSearchParams(location.hash.slice(1)).get("palette") === "1",
+      );
+    window.addEventListener("hashchange", restore);
+    window.addEventListener("popstate", restore);
+    return () => {
+      window.removeEventListener("hashchange", restore);
+      window.removeEventListener("popstate", restore);
+    };
+  }, []);
   const previewColors = useMemo(() => {
-    if (!palette || !previewPalette) return null;
+    if (!palettePreviewActive || !palette || !previewPalette) return null;
     try {
       return palettePreviewColors(source, previewPalette);
     } catch {
       return null;
     }
-  }, [source, palette, previewPalette]);
+  }, [source, palette, previewPalette, palettePreviewActive]);
   const entries = useMemo(() => themeEntries(source), [source]);
   const pairedEntries = useMemo(() => {
     const groups = new Map<
@@ -257,6 +256,7 @@ export function App({ shared }: { shared?: PresetShare }) {
     } else update(next);
   };
   const createPalette = () => {
+    setPalettePreviewActive(true);
     set("palette", {
       end: {
         ...color,
@@ -313,6 +313,7 @@ export function App({ shared }: { shared?: PresetShare }) {
     }
   };
   const choose = (id: string) => {
+    setPalettePreviewActive(false);
     const p = saved.find((p) => p.id === id);
     if (!p) return;
     if (dirty && !confirm("Discard unsaved preset changes?")) return;
@@ -441,13 +442,6 @@ export function App({ shared }: { shared?: PresetShare }) {
                 Create palette
               </Button>
             )}
-            <Button
-              ref={harmonizerTrigger}
-              variant="outline"
-              onClick={() => setHarmonizerView("open")}
-            >
-              Harmonizer
-            </Button>
           </div>
           {palette && ramp && (
             <PaletteControls
@@ -456,6 +450,7 @@ export function App({ shared }: { shared?: PresetShare }) {
               colors={ramp.colors}
               path={ramp.path}
               onPreviewChange={setPreviewPalette}
+              onEdit={() => setPalettePreviewActive(true)}
               onChange={(patch) =>
                 updateState("palette", (current) =>
                   current ? { ...current, ...patch } : current,
@@ -482,6 +477,15 @@ export function App({ shared }: { shared?: PresetShare }) {
           {pickers.map((panel, panelIndex) => (
             <section
               className="panel color-panel"
+              onPointerDownCapture={() => {
+                if (palette) setPalettePreviewActive(true);
+              }}
+              onFocusCapture={() => {
+                if (palette) setPalettePreviewActive(true);
+              }}
+              onChangeCapture={() => {
+                if (palette) setPalettePreviewActive(true);
+              }}
               key={panel.id}
               aria-label={`Color picker ${panel.mode} ${panelIndex + 1}`}
             >
@@ -544,7 +548,11 @@ export function App({ shared }: { shared?: PresetShare }) {
             </section>
           ))}
         </aside>
-        <div className="theme-column">
+        <div
+          className="theme-column"
+          onPointerDownCapture={() => setPalettePreviewActive(false)}
+          onFocusCapture={() => setPalettePreviewActive(false)}
+        >
           <section className="panel" aria-labelledby="presets-heading">
             <div className="panel-heading">
               <h2 id="presets-heading">Presets</h2>
@@ -700,6 +708,7 @@ export function App({ shared }: { shared?: PresetShare }) {
                           );
                           return;
                         }
+                        set("palette", undefined);
                         set("selected", i);
                         setColor(next, false);
                       }}
@@ -728,7 +737,10 @@ export function App({ shared }: { shared?: PresetShare }) {
                   key={value}
                   role="tab"
                   aria-selected={tab === value}
-                  onClick={() => set("tab", value)}
+                  onClick={() => {
+                    setPalettePreviewActive(false);
+                    set("tab", value);
+                  }}
                 >
                   {value === "preview"
                     ? "Components"
@@ -811,6 +823,7 @@ export function App({ shared }: { shared?: PresetShare }) {
               aria-label="shadcn/ui theme stylesheet"
               spellCheck={false}
               value={source}
+              onFocus={() => setPalettePreviewActive(false)}
               onChange={(e) => {
                 set("source", e.target.value);
                 set("selected", null);
@@ -822,7 +835,11 @@ export function App({ shared }: { shared?: PresetShare }) {
               {compiled.css}
             </pre>
           )}
-          <div className="export-bar">
+          <div
+            className="export-bar"
+            onPointerDownCapture={() => setPalettePreviewActive(false)}
+            onFocusCapture={() => setPalettePreviewActive(false)}
+          >
             <span className="muted">
               {Math.round(compiled.css.length / 1024)} KB CSS
             </span>
@@ -855,49 +872,6 @@ export function App({ shared }: { shared?: PresetShare }) {
           </div>
         </section>
       </main>
-      {harmonizerView !== "unopened" && (
-        <Suspense fallback={<span role="status">Opening harmonizer…</span>}>
-          <Harmonizer
-            open={harmonizerView === "open"}
-            value={state.harmonizer ?? defaultHarmonizerSettings}
-            historyGroup={historyGroup}
-            onClose={() => setHarmonizerView("closed")}
-            onReturnFocus={() => harmonizerTrigger.current?.focus()}
-            onApply={(settings, seed, group) => {
-              editWorkspace(
-                (previous) => ({
-                  ...previous,
-                  harmonizer: settings,
-                  ...(seed
-                    ? {
-                        color: seed.start,
-                        selected: null,
-                        palette: previous.palette
-                          ? {
-                              ...previous.palette,
-                              end: seed.end,
-                              middle: previous.palette.middle
-                                ? {
-                                    ...previous.palette.middle,
-                                    h: seed.hue % 360,
-                                  }
-                                : undefined,
-                            }
-                          : {
-                              end: seed.end,
-                              endpoint: "start",
-                              mode: "OKHCL",
-                              subdivisions: settings.levels.length - 1,
-                            },
-                      }
-                    : {}),
-                }),
-                group,
-              );
-            }}
-          />
-        </Suspense>
-      )}
       <PreviewConnections />
     </>
   );

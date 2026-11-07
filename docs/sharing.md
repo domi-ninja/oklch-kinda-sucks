@@ -4,12 +4,16 @@ This is the product contract for URL handling and persistence. Keep the UI, sche
 
 ## Two kinds of links
 
-| Link                                | Contents                                          | How it is created                     |
-| ----------------------------------- | ------------------------------------------------- | ------------------------------------- |
-| `/#color=L,C,H,A&pickers=HSL,OKHCL` | One current OKLCH color and the open picker modes | The address bar updates while editing |
-| `/share/<id>`                       | A preset name and its current stylesheet          | Share preset in the Presets panel     |
+| Link                                | Contents                                       | How it is created                     |
+| ----------------------------------- | ---------------------------------------------- | ------------------------------------- |
+| `/#color=L,C,H,A&pickers=HSL,OKHCL` | Current color or palette and open picker modes | The address bar updates while editing |
+| `/share/<id>`                       | A preset name and its current stylesheet       | Share preset in the Presets panel     |
 
-Color URLs use lightness, chroma, hue in degrees, and alpha from 0 to 1. Values are bounded before use. In palette mode, it contains the active color, including a selected middle control. It does not describe the palette structure, other colors, subdivision count, or interpolation mode.
+Color URLs use lightness, chroma, hue in degrees, and alpha from 0 to 1. Values are bounded before use. `color` is the active picker color; `pickers` lists the open picker modes.
+
+`palette=1` restores palette mode. `start`, `end`, and optional `middle` carry its control colors. `point` selects the active control, `steps` is the subdivision count, `interpolation` chooses the color space, `mode` chooses `apca` or `contrast`, and `chroma` is the saturation multiplier. Optional `positions` contains URL-encoded JSON with light/dark token position overrides. Without `palette=1`, a color link opens single-color mode. Invalid palette data is discarded. Reload and browser navigation restore the URL state.
+
+These address-bar links do not include preset names or stylesheets and do not write to the backend.
 
 Preset links include the editable stylesheet as it stands when Share preset is clicked. This includes unsaved changes, light and dark tokens, generated colors, radii, and other custom CSS. Sharing does not save over a preset or change its dirty state.
 
@@ -17,13 +21,13 @@ Preset links do not include the current picker color, picker layout, selected to
 
 ## Browser storage
 
-The browser saves the workspace under `oklch-workspace` and saved presets under `oklch-presets`. This includes drafts, selected preset and token, picker configuration, palette settings, theme generator controls, Harmonizer rows and settings, preview width, and tab. Harmonizer settings are excluded from color URLs and preset links. Ordinary editing, saving, discarding, and color URL navigation do not write to the backend.
+The browser saves the workspace under `oklch-workspace` and saved presets under `oklch-presets`. This includes drafts, selected preset and token, picker configuration, palette settings, preview width, and tab. Ordinary editing, saving, discarding, and color URL navigation do not write to the backend.
 
 Undo and redo history stays in memory until reload. It is excluded from browser storage, color URLs, and preset links. Restoring a saved preset through undo or redo updates the ordinary browser storage.
 
-Opening a preset link imports its name and stylesheet as a local preset and selects it. An identical local preset is reused. Existing saved presets are never overwritten by an import. The recipient keeps their current color, picker configuration, palette, generator controls, preview width, and tab. The selected token is cleared to avoid binding it to an unrelated declaration.
+Opening a preset link imports its name and stylesheet as a local preset and selects it. An identical local preset is reused. Existing saved presets are never overwritten by an import. The recipient keeps their current color, picker configuration, palette, preview width, and tab. The selected token is cleared to avoid binding it to an unrelated declaration.
 
-After import, the address becomes the normal color URL. The imported preset remains in browser storage. Use Share preset to create another preset link; copying the address shares the current color.
+After import, the address becomes the normal color URL. The imported preset remains in browser storage. Use Share preset to create another preset link; copying the address shares the current color or palette.
 
 ## Share storage and API
 

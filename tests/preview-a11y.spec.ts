@@ -31,6 +31,16 @@ for (const mode of ["light", "dark"])
     expect(markerBox.y).toBeLessThan(projectBox.y + projectBox.height);
     await project.evaluate((el) => {
       el.style.color = "white";
+      el.style.backgroundColor = "white";
+    });
+    await expect(marker).toHaveAttribute("data-a11y-issue", "failure", {
+      timeout: 15000,
+    });
+    await expect(marker).toHaveAttribute("aria-label", /1:1 contrast ratio/, {
+      timeout: 15000,
+    });
+    await project.evaluate((el) => {
+      el.style.color = "white";
       el.style.backgroundColor = "black";
     });
     await expect(audit).toHaveAttribute("data-a11y-failures", "0", {

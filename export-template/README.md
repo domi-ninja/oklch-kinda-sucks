@@ -11,7 +11,7 @@ npm run dev
 
 Open the URL printed by Vite. Use Dark mode or Light mode to switch themes. Add `?theme=dark` to start in dark mode.
 
-The app includes every panel from the editor preview: project progress and actions, activity, project settings, and team members. Form values, notifications, project actions, and member removal use React state. Save changes rejects a blank project name. Edit notification email validates the address format before saving. Remove member asks for confirmation; Restore member reverses it. Cancel and Escape close dialogs without applying changes. These demo interactions reset on reload.
+The app includes every panel from the editor preview: project progress and actions, activity, project settings, and team members. Form values, notifications, project actions, and member removal use React state. Press Enter in the project name field to submit it; blank names show a validation error. Edit notification email validates the address format before saving. Remove member asks for confirmation; Restore member reverses it. Cancel and Escape close dialogs without applying changes. These demo interactions reset on reload.
 
 Edit colors in `src/theme.css`, the sample app in `src/App.tsx`, or the included components in `src/components/ui`. `components.json` configures shadcn/ui and the `@/` alias so you can add more components.
 

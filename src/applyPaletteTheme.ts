@@ -8,6 +8,35 @@ import {
   type ThemePalette,
 } from "./paletteHarmonizer";
 
+const aliases: Record<string, string> = {
+  "--color-muted":
+    "color-mix(in oklab, var(--color-card) 95%, var(--color-foreground))",
+  "--color-muted-foreground": "var(--color-foreground)",
+  "--color-border":
+    "color-mix(in oklab, var(--color-card) 85%, var(--color-foreground))",
+  "--color-popover": "var(--color-card)",
+  "--color-popover-foreground": "var(--color-card-foreground)",
+  "--color-input": "var(--color-border)",
+  "--color-ring": "var(--color-primary)",
+  "--color-sidebar": "var(--color-card)",
+  "--color-sidebar-foreground": "var(--color-card-foreground)",
+  "--color-sidebar-primary": "var(--color-primary)",
+  "--color-sidebar-primary-foreground": "var(--color-primary-foreground)",
+  "--color-sidebar-accent": "var(--color-accent)",
+  "--color-sidebar-accent-foreground": "var(--color-accent-foreground)",
+  "--color-sidebar-border": "var(--color-border)",
+  "--color-sidebar-ring": "var(--color-primary)",
+};
+const commonAliases = [
+  "--color-muted",
+  "--color-muted-foreground",
+  "--color-border",
+  "--color-popover",
+  "--color-popover-foreground",
+  "--color-input",
+  "--color-ring",
+];
+
 const toOklch = converter("oklch");
 
 export function palettePreviewColors(
@@ -37,7 +66,7 @@ export function themePaletteCss(palette: ThemePalette, mode: ThemeMode) {
   const declarations = Object.entries(palette.tokens)
     .map(([name, color]) => `  --color-${name}: ${cssColor(color)};`)
     .join("\n");
-  return `${mode === "dark" ? ".dark" : "@theme"} {\n${declarations}\n}`;
+  return `${mode === "dark" ? ".dark" : "@theme"} {\n${declarations}\n${commonAliases.map((name) => `  ${name}: ${aliases[name]};`).join("\n")}\n}`;
 }
 
 // Replace color declarations in place, retaining unrelated CSS and explicit !important flags.
@@ -79,28 +108,39 @@ export function applyPaletteTheme(
     };
     // Existing semantic fills such as destructive keep their color, but their text becomes pure black/white.
     for (const name of inherited.keys()) {
-      if (!name.endsWith("-foreground") || colors.has(name)) continue;
+      if (!name.endsWith("-foreground") || colors.has(name) || aliases[name])
+        continue;
       const fill =
         resolve(name.replace(/-foreground$/, "")) ??
         palettes[mode].tokens.background;
       colors.set(name, themeInk(fill));
     }
-    const missing = new Map(colors);
+    const values = new Map(
+      [...colors].map(([name, color]) => [name, cssColor(color)]),
+    );
+    for (const [name, target] of Object.entries(aliases)) {
+      if (
+        commonAliases.includes(name) ||
+        original.light.has(name) ||
+        original.dark.has(name)
+      )
+        values.set(name, target);
+    }
+    const missing = new Map(values);
     for (const entry of declarations) {
-      const color = colors.get(entry.name);
-      if (entry.mode !== mode || !color) continue;
+      const value = values.get(entry.name);
+      if (entry.mode !== mode || !value) continue;
       edits.push({
         start: entry.start,
         end: entry.end,
         text:
-          cssColor(color) +
-          (/!important\s*$/i.test(entry.value) ? " !important" : ""),
+          value + (/!important\s*$/i.test(entry.value) ? " !important" : ""),
       });
       missing.delete(entry.name);
     }
     if (!missing.size) continue;
     const text = [...missing]
-      .map(([name, color]) => `  ${name}: ${cssColor(color)};`)
+      .map(([name, value]) => `  ${name}: ${value};`)
       .join("\n");
     const block = [...blocks].reverse().find((block) => block.mode === mode);
     if (block) {

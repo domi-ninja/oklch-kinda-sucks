@@ -18,7 +18,6 @@ export const demoBody = `<main class="min-h-screen bg-background text-foreground
         <p id="project-name-error" role="alert" class="mt-3 text-destructive" hidden></p>
         <label class="flex min-h-11 items-center gap-3 my-6"><input type="checkbox" checked class="accent-primary"/> Email notifications</label>
         <div class="grid gap-3 mb-6"><p id="notification-address" class="break-all text-muted-foreground">jamie@example.com</p><div><button id="edit-email" type="button" class="min-h-11 rounded-lg border border-border bg-background px-4 py-3 text-foreground hover:bg-muted">Edit notification email</button></div></div>
-        <button id="save" type="submit" class="min-h-11 rounded-lg bg-primary px-4 py-3 text-primary-foreground">Save changes</button>
       </form>
     </section>
     <section class="rounded-xl border border-border bg-card p-6">

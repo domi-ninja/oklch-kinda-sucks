@@ -155,7 +155,7 @@ test("theme edits compile, presets persist, and exported app works offline", asy
     "background-color",
     "oklch(0.5 0.1 200)",
   );
-  await page.getByRole("button", { name: "Save changes" }).click();
+  await page.getByLabel("Name", { exact: true }).press("Enter");
   await expect(page.getByRole("status")).toHaveText("Settings saved");
 });
 
@@ -272,7 +272,7 @@ test("light and dark previews stay stacked and both export offline", async ({
       "background-color",
       background,
     );
-    await page.getByRole("button", { name: "Save changes" }).click();
+    await page.getByLabel("Name", { exact: true }).press("Enter");
     await expect(page.getByRole("status")).toHaveText("Settings saved");
   }
 });

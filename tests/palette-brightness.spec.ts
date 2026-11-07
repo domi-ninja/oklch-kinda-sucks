@@ -30,101 +30,59 @@ const luminance = ([r, g, b]: number[]) =>
   0.2126 * linear(r) + 0.7152 * linear(g) + 0.0722 * linear(b);
 
 async function checkScale(page: Page, count: number, mode?: "light" | "dark") {
-  const colorName = mode ? `Harmonized ${mode} colors` : "Palette colors";
-  const brightnessName = mode
-    ? `Harmonized ${mode} brightness`
-    : "Perceived brightness";
-  const colors = page.getByRole("list", {
-    name: colorName,
+  const strip = page.getByRole("list", {
+    name: mode ? `Harmonized ${mode} colors` : "Palette colors",
     exact: true,
   });
-  const brightness = page.getByRole("list", {
-    name: brightnessName,
-    exact: true,
+  await expect(strip).toHaveAttribute("aria-busy", "false");
+  await expect(strip.getByRole("listitem")).toHaveCount(count);
+  await expect(strip.getByRole("img")).toHaveCount(count);
+  const image = await pixels(page, strip);
+  const positions = await strip.evaluate((element) => {
+    const bounds = element.getBoundingClientRect();
+    return [...element.querySelectorAll("li")].map((cell) => {
+      const color = cell
+        .querySelector(".palette-cell-color")!
+        .getBoundingClientRect();
+      const gray = cell
+        .querySelector(".palette-cell-brightness")!
+        .getBoundingClientRect();
+      return {
+        x: color.x + color.width / 2 - bounds.x,
+        y: color.y - bounds.y,
+        grayY: gray.y - bounds.y,
+        width: color.width,
+        grayWidth: gray.width,
+      };
+    });
   });
-  await expect(brightness.getByRole("listitem")).toHaveCount(count);
-  const upperCells = await colors.locator("li").evaluateAll((cells) =>
-    cells.map((cell) => {
-      const rect = cell.getBoundingClientRect();
-      return { x: rect.x, width: rect.width };
-    }),
-  );
-  const lowerCells = await brightness.locator("li").evaluateAll((cells) =>
-    cells.map((cell) => {
-      const rect = cell.getBoundingClientRect();
-      return { x: rect.x, width: rect.width };
-    }),
-  );
-  expect(lowerCells).toEqual(upperCells);
-  for (const name of [
-    "Harmonized light colors",
-    "Harmonized light brightness",
-    "Harmonized dark colors",
-    "Harmonized dark brightness",
-  ]) {
-    const row = page.getByRole("list", { name, exact: true });
-    await expect(row).toHaveAttribute("aria-busy", "false");
-    await expect(row.getByRole("listitem")).toHaveCount(count);
-    expect(
-      await row.locator("li").evaluateAll((cells) =>
-        cells.map((cell) => {
-          const rect = cell.getBoundingClientRect();
-          return { x: rect.x, width: rect.width };
-        }),
-      ),
-    ).toEqual(upperCells);
-  }
-  const scroll = page.locator(".palette-scale-scroll");
-  const checked = new Set<number>();
-  const dimensions = await scroll.evaluate((element) => ({
-    width: element.clientWidth,
-    total: element.scrollWidth,
-  }));
-  for (let left = 0; left < dimensions.total; left += dimensions.width * 0.7) {
-    await scroll.evaluate((element, left) => {
-      element.scrollLeft = left;
-    }, left);
-    const image = await pixels(page, scroll);
-    const positions = await scroll.evaluate(
-      (element, { colorName, brightnessName }) => {
-        const bounds = element.getBoundingClientRect();
-        return {
-          colors: [
-            ...element.querySelectorAll(`[aria-label="${colorName}"] li`),
-          ].map((cell) => {
-            const rect = cell.getBoundingClientRect();
-            return {
-              x: rect.x + rect.width / 2 - bounds.x,
-              y: rect.y - bounds.y,
-            };
-          }),
-          grayY:
-            element
-              .querySelector(`[aria-label="${brightnessName}"] li`)!
-              .getBoundingClientRect().y - bounds.y,
-          end: element.scrollLeft + element.clientWidth >= element.scrollWidth,
-        };
-      },
-      { colorName, brightnessName },
-    );
-    const read = (x: number, y: number) =>
-      image.data.slice(
-        (Math.floor(y) * image.width + Math.floor(x)) * 4,
-        (Math.floor(y) * image.width + Math.floor(x)) * 4 + 3,
-      );
-    for (const [index, point] of positions.colors.entries()) {
-      if (point.x < 2 || point.x > image.width - 2) continue;
-      checked.add(index);
-      for (const offset of [4, 12]) {
-        const rgb = read(point.x, point.y + offset);
-        const gray = read(point.x, positions.grayY + offset);
-        expect(Math.max(...gray) - Math.min(...gray)).toBeLessThanOrEqual(1);
-        expect(Math.abs(luminance(gray) - luminance(rgb))).toBeLessThan(0.012);
-      }
+  const read = (x: number, y: number) => {
+    const offset = (Math.floor(y) * image.width + Math.floor(x)) * 4;
+    return image.data.slice(offset, offset + 3);
+  };
+  for (const point of positions) {
+    expect(point.grayWidth).toBe(point.width);
+    for (const offset of [4, 12]) {
+      const rgb = read(point.x, point.y + offset);
+      const gray = read(point.x, point.grayY + offset);
+      expect(Math.max(...gray) - Math.min(...gray)).toBeLessThanOrEqual(1);
+      expect(Math.abs(luminance(gray) - luminance(rgb))).toBeLessThan(0.012);
     }
-    if (positions.end) break;
   }
-  expect(checked.size).toBe(count);
+  expect(
+    await page
+      .locator(".palette-scale-scroll")
+      .evaluate((el) => el.scrollWidth <= el.clientWidth),
+  ).toBe(true);
+  expect(
+    await strip.locator(".palette-hex").evaluateAll((labels) =>
+      labels.every((el) => {
+        const parent = el.parentElement!.getBoundingClientRect();
+        const rect = el.getBoundingClientRect();
+        return rect.left >= parent.left && rect.right <= parent.right;
+      }),
+    ),
+  ).toBe(true);
 }
 
 test("brightness tracks rendered palette colors, alpha and mobile columns", async ({

@@ -12,7 +12,7 @@ Use Create palette to build a gradient and preview its harmonized light and dark
 
 ## Share or export
 
-- Copy the address bar to share the current color and open picker modes.
+- Copy the address bar to share the current color or full palette and open picker modes.
 - Use Share preset in the Presets panel to create a link to the current theme, including unsaved edits. Opening it adds a local preset without replacing the recipient's picker setup.
 - CSS downloads the stylesheet. Export app downloads a React/Vite/Tailwind/shadcn/ui project with all sample panels and both theme modes.
 

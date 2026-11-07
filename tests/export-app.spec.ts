@@ -127,9 +127,7 @@ test("exported React project installs, builds, and runs every sample in both the
     await page
       .getByRole("checkbox", { name: "Email notifications", exact: true })
       .uncheck();
-    await page
-      .getByRole("button", { name: "Save changes", exact: true })
-      .click();
+    await page.getByLabel("Name", { exact: true }).press("Enter");
     await expect(page.getByRole("status")).toHaveText("Settings saved");
     await expect(
       page.getByRole("heading", { name: "New project", exact: true }),

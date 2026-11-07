@@ -113,12 +113,21 @@ window.addEventListener(
             for (const node of issue.nodes) {
               const selector = node.target[0];
               if (typeof selector !== "string") continue;
+              const exactFailure =
+                issue.id === "color-contrast" &&
+                node.any.some(
+                  (check) =>
+                    check.data &&
+                    typeof check.data === "object" &&
+                    check.data.contrastRatio === 1,
+                );
+              const needsReview = review && !exactFailure;
               const element = document.querySelector(selector);
               if (element)
                 findings.push({
                   element,
-                  review,
-                  message: `${review ? "Needs review: " : ""}${issue.help}\n${node.failureSummary ?? issue.description}`,
+                  review: needsReview,
+                  message: `${needsReview ? "Needs review: " : ""}${issue.help}\n${node.failureSummary ?? issue.description}`,
                 });
             }
         }

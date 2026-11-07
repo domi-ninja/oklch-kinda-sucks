@@ -8,6 +8,7 @@ import { channels, coordinates } from "../src/pickerModes";
 import { pickerPlanes } from "../src/planes";
 import { workspaceSchema } from "../src/workspaceSchema";
 import { workspaceStorageKey } from "../src/workspace";
+import { parseColor } from "../src/color";
 
 async function workspace(page: Page) {
   return workspaceSchema.parse(
@@ -21,7 +22,7 @@ async function workspace(page: Page) {
 async function rgba(page: Page, index: number) {
   return page
     .getByRole("list", { name: "Palette colors", exact: true })
-    .locator("li > span")
+    .locator(".palette-cell-color > span")
     .nth(index)
     .evaluate((element) => {
       const canvas = document.createElement("canvas");
@@ -32,6 +33,47 @@ async function rgba(page: Page, index: number) {
       return [...context.getImageData(0, 0, 1, 1).data];
     });
 }
+
+test("selecting a theme color exits palette mode and undo restores its control points", async ({
+  page,
+}) => {
+  await page.goto("/#color=0.8,0.1,90,1&pickers=OKHCL");
+  await page
+    .getByRole("button", { name: "Create palette", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Add middle color", exact: true })
+    .click();
+  const before = await workspace(page);
+  const token = page.locator('.token[title="color-primary"]');
+  const expected = parseColor(
+    await token
+      .locator(".token-swatch > span")
+      .evaluate((el) => el.style.background),
+  );
+  await token.click();
+  await expect(
+    page.getByRole("region", { name: "Palette", exact: true }),
+  ).toHaveCount(0);
+  await expect
+    .poll(async () => (await workspace(page)).color)
+    .toEqual(expected);
+  expect((await workspace(page)).source).toBe(before.source);
+  await page.getByRole("button", { name: "Undo", exact: true }).click();
+  await expect
+    .poll(async () => (await workspace(page)).palette)
+    .toEqual(before.palette);
+  await expect
+    .poll(async () => (await workspace(page)).color)
+    .toEqual(before.color);
+  await page.getByRole("button", { name: "Redo", exact: true }).click();
+  await expect
+    .poll(async () => (await workspace(page)).palette)
+    .toBeUndefined();
+  await expect
+    .poll(async () => (await workspace(page)).color)
+    .toEqual(expected);
+});
 
 test("palette lerp uses the selected coordinates, shortest hue and linear alpha", () => {
   expect(interpolateCoordinates([255, 0, 0], [0, 0, 255], "RGB", 0.5)).toEqual([
@@ -312,7 +354,7 @@ test("palette stays local when sharing a preset and fits on phones", async ({
   await expect(
     page.getByRole("button", { name: "End", exact: true }),
   ).toHaveAttribute("aria-pressed", "true");
-  expect((await workspace(page)).palette).toEqual(saved.palette);
+  expect((await workspace(page)).palette).toMatchObject(saved.palette!);
   const colorLink = page.url();
   expect(writes).toHaveLength(0);
   for (const width of [320, 390]) {
@@ -337,11 +379,9 @@ test("palette stays local when sharing a preset and fits on phones", async ({
   const shared = await context.newPage();
   await shared.goto(colorLink);
   await expect(
-    shared.getByRole("button", { name: "Create palette", exact: true }),
-  ).toBeVisible();
-  await shared
-    .getByRole("button", { name: "Create palette", exact: true })
-    .click();
+    shared.getByLabel("Palette subdivisions", { exact: true }),
+  ).toHaveValue("6");
+  expect((await workspace(shared)).palette).toMatchObject(saved.palette!);
   await shared.getByLabel("Palette subdivisions", { exact: true }).fill("3");
   await shared
     .getByLabel("Palette interpolation", { exact: true })

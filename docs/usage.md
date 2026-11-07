@@ -28,7 +28,7 @@ The last 100 steps stay in memory until reload. Undoing saved preset changes upd
 
 Built-in presets are protected. Save as new creates an editable copy. Save updates a custom preset, and Discard changes restores its saved stylesheet and the selected picker color. Browser storage keeps saved presets and unfinished work across reloads.
 
-Copy the address bar to share the current color and open picker modes. Use Share preset in the Presets panel to share the theme's name and current stylesheet, including unsaved edits. A recipient imports a local preset and keeps their own picker setup. Palette settings and generation controls are not part of a preset link.
+Copy the address bar to share the current color or complete palette and open picker modes. Use Share preset in the Presets panel to share the theme's name and current stylesheet, including unsaved edits. A recipient imports a local preset and keeps their own picker setup. Palette settings and generation controls are not part of a preset link.
 
 Opening a shared preset returns to a normal color URL after import. Use Share preset to share the imported theme again. Saved presets remain local; a share link does not create a synced account or cloud backup.
 
@@ -38,33 +38,29 @@ Create palette adds a second color. Select Start or End, or drag an S or E circl
 
 Add middle color enables a quadratic Bézier curve. Select Middle or drag its M handle to pull the curve using the selected interpolation space. The middle control is not a generated swatch or a point the curve must pass through. Remove middle color returns to linear interpolation without changing the endpoints.
 
-Intermediate markers show the generated steps and cannot be edited. Copy palette copies CSS variables for those colors. Palettes save in this browser; a color URL shares only the active endpoint.
+Intermediate markers show the generated steps and cannot be edited. Copy palette copies CSS variables for those colors. Palettes save in this browser and in the address bar, including control colors, subdivisions, interpolation, harmonization, chroma, and token assignments.
 
 Hex labels sit directly on each swatch. APCA contrast chooses black or white text against both checkerboard shades, including transparency. Contrast uses Display P3 on supported screens and browser canvases, otherwise sRGB. Hex values remain sRGB.
 
 The grayscale strip below the palette matches each color's relative luminance on a standard sRGB display, including its transparency over the checkerboard. It uses linear-light luminance, not an RGB average or the picker's lightness channel. Actual perceived brightness varies with the display, viewing conditions, and observer.
 
-Harmonized light and Harmonized dark each have a color strip and a brightness strip. The original gradient is read from light on the left to dark on the right. Its hue and chroma path supplies the theme colors, including the middle control. APCA tones distributes nearby tones within a dark band for dark mode and a light band capped below near-white for light mode. Automatic surfaces have restrained tints; explicitly placed Card or Background colors use the selected slot. Palette tones keeps the original lightness and chroma wherever text is already readable, adjusting only colors below the text contrast threshold. Contrast is measured from black or white text against each fill, not from the fill against an unrelated reference background. Generated theme fills are opaque and text is pure black or white. All six rows share the same step count and scroll together.
+Harmonized light and Harmonized dark each show a color strip, a matching brightness strip, and draggable token labels. Both keep the original hue direction. Generated fills are opaque; text is black or white.
 
-Apply palette to preset fills both modes of the current preset draft: backgrounds, cards, primary, secondary, accent, muted, borders, inputs, rings, and sidebar colors. Primary starts at the middle hue; secondary and accent start at the quarter points. Both modes keep the original gradient direction. The compact Chroma slider uses a quadratic response for finer adjustment at low saturation and boosts surface tints above 100%; gamut fitting still limits colors that cannot be displayed. Drag a token label below either harmonized scale into a free color slot. The preview updates when a free target is reached; releasing commits the move. Occupied slots in the same lane keep their token. The draggable labels are Background, Primary, Secondary, Accent, and Card. Other tokens keep their automatic assignments. Explicitly positioning Card uses the exact harmonized slot color. Arrow keys move a focused token to the next free slot. Reset positions beside each harmonized heading restores that mode’s automatic assignments. These settings save in this browser and support undo. Error colors keep their existing fills. Custom CSS and non-color settings are preserved. Undo reverses the apply action in one step. Use the usual preset save controls to keep the updated stylesheet as a saved preset.
+Improve contrast preserves the sampled colors and accepts only contrast-improving lightness nudges of at most 0.02. In the light theme, Card starts at the original gradient start. Background starts at 5% of the gradient. In the dark theme, Card starts at the dark end.
 
-Hover over the palette panel to try its mapped light and dark colors in the component previews. Moving the mouse outside restores the current preset. Hovering does not save changes or add an undo step, and preview scroll positions and form inputs stay in place.
+APCA tones has exact white and black endpoints. Intermediate tones target evenly spaced APCA contrast against white while retaining the palette’s hue and chroma. Theme roles choose positions independently of tone generation. Text colors are checked against their actual surfaces; the accessibility overlay flags remaining issues.
 
-The labels below each harmonized scale show the actual mapped token colors, including Card.
+Chroma is a compact slider with a quadratic response for finer low-saturation control. Drag Background, Primary, Secondary, Accent, or Card into a free slot in its lane. Reaching a free target previews its new color before release; occupied slots reject the drop. Arrow keys move a focused token to the next free slot. Reset positions beside each mode heading restores automatic assignments. Undo reverses edits.
 
-Copy light theme and Copy dark theme copy the generated token declarations for their respective modes.
+Editing palette controls or color pickers previews the mapped theme without writing its stylesheet. Working with presets or Theme CSS suspends this preview so those views show the actual theme. Clicking a theme color exits palette mode and loads that token into the pickers. Preview scroll and form drafts remain in place.
 
-### Harmonizer
+Swatches and token slots wrap to fit the available width.
 
-Open Harmonizer above the pickers for a hue-by-contrast grid. Use selects a row and sets the palette's Start and End to its first and last colors. Moving a row's Hue slider selects that row and updates both endpoints. An existing palette keeps its interpolation mode, subdivisions, and optional middle control; the middle control takes the new hue.
-
-The initial grid has nine levels and five hues. APCA fields set contrast targets against the dark or light background. Even chroma uses a common chroma across each column; Max chroma finds the maximum for each swatch. Chroma limit caps a column, and its reset button restores automatic calculation. Choose sRGB or Display P3; P3 badges mark colors outside sRGB. Hover a swatch for its CSS value and measured APCA contrast.
-
-Hue rows, levels, backgrounds, and settings save in this browser and support undo. Using the grid changes the palette, not the preset stylesheet. The grid's intermediate colors follow its contrast targets; the palette's intermediate colors follow its interpolation mode. Harmonizer settings are excluded from both kinds of share link.
+Apply palette to preset updates both modes of the draft. It sets the core theme colors and preserves error fills and unrelated CSS. Muted surfaces and borders derive from Card and Foreground. Shared muted text uses Foreground so it remains readable on cards. Popover, input, ring, and any existing sidebar variables inherit their main tokens through CSS aliases. Use the preset save controls to save the stylesheet. Copy light theme and Copy dark theme copy their respective declarations.
 
 ## Preview forms and dialogs
 
-Save changes validates the project name and focuses the field if it is blank. Edit notification email opens a dialog that validates the address format before saving. Cancel and Escape discard the email draft. Remove member opens a confirmation dialog; Cancel receives focus first. Restore member reverses a confirmed removal. These sample interactions reset on reload.
+Press Enter in the project name field to submit it. A blank name shows an error and keeps focus in the field. Edit notification email opens a dialog that validates the address format before saving. Cancel and Escape discard the email draft. Remove member opens a confirmation dialog; Cancel receives focus first. Restore member reverses a confirmed removal. These sample interactions reset on reload.
 
 Accessibility checks run automatically inside both component previews using axe-core. The overlay reports WCAG contrast ratios; APCA is the palette generation metric. Red outlines and numbered markers identify detected violations. Hover or focus a marker for the failure details, including measured and required text contrast. Amber markers identify checks that need review. Results refresh after theme or component changes; they are automated checks, not an accessibility certification. Diagnostic markers stay in the editor and are omitted from exports.
 

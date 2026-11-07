@@ -44,6 +44,7 @@ export function PaletteControls({
   onCopyHarmonized,
   onApply,
   onPreviewChange,
+  onEdit,
 }: {
   start: Color;
   palette: Palette;
@@ -59,6 +60,7 @@ export function PaletteControls({
   onCopyHarmonized: (palette: ThemePalette, mode: ThemeMode) => void;
   onApply: (palettes: HarmonizedPalettes) => void;
   onPreviewChange: (palettes: HarmonizedPalettes | null) => void;
+  onEdit: () => void;
 }) {
   const brightnessFilter = useId();
   const settings = palette.theme ?? defaultPaletteTheme;
@@ -84,28 +86,24 @@ export function PaletteControls({
     [settings, dragPreview],
   );
   const harmony = useHarmonizedPalette(colors, path, previewSettings);
+  const [dragSnapshot, setDragSnapshot] = useState<HarmonizedPalettes | null>(
+    null,
+  );
   const [applyError, setApplyError] = useState("");
-  const [hovered, setHovered] = useState(false);
   useLayoutEffect(
     function syncHoveredPalettePreview() {
-      onPreviewChange(
-        (hovered || dragPreview) && !harmony.error
-          ? (harmony.palette ?? null)
-          : null,
-      );
+      onPreviewChange(!harmony.error ? (harmony.palette ?? null) : null);
       return () => onPreviewChange(null);
     },
-    [hovered, dragPreview, harmony.palette, harmony.error, onPreviewChange],
+    [harmony.palette, harmony.error, onPreviewChange],
   );
   return (
     <section
       className="panel palette-panel"
       aria-label="Palette"
-      onPointerEnter={(event) => {
-        if (event.pointerType === "mouse") setHovered(true);
-      }}
-      onPointerLeave={() => setHovered(false)}
-      onPointerCancel={() => setHovered(false)}
+      onPointerDownCapture={onEdit}
+      onFocusCapture={onEdit}
+      onChangeCapture={onEdit}
     >
       <div className="panel-heading">
         <h2>Palette</h2>
@@ -181,19 +179,33 @@ export function PaletteControls({
             Harmonization
             <select
               aria-label="Harmonization"
-              value={settings.mapping ?? "apca"}
-              onChange={(event) =>
+              value={settings.mapping ?? "contrast"}
+              onChange={(event) => {
+                const mapping =
+                  event.target.value === "contrast" ? "contrast" : "apca";
+                const clearSurfaces = (positions: Record<string, number>) =>
+                  Object.fromEntries(
+                    Object.entries(positions).filter(
+                      ([role]) => role !== "card" && role !== "background",
+                    ),
+                  );
                 onChange({
                   theme: {
                     ...settings,
-                    mapping:
-                      event.target.value === "palette" ? "palette" : "apca",
+                    mapping,
+                    positions:
+                      mapping === "contrast"
+                        ? {
+                            light: clearSurfaces(settings.positions.light),
+                            dark: clearSurfaces(settings.positions.dark),
+                          }
+                        : settings.positions,
                   },
-                })
-              }
+                });
+              }}
             >
               <option value="apca">APCA tones</option>
-              <option value="palette">Palette tones</option>
+              <option value="contrast">Improve contrast</option>
             </select>
           </label>
           <label className="palette-chroma">
@@ -254,10 +266,7 @@ export function PaletteControls({
             </defs>
           </svg>
           <div className="palette-scale-scroll">
-            <div
-              className="palette-scale-content"
-              style={{ minWidth: colors.length * 88 }}
-            >
+            <div className="palette-scale-content">
               <span className="palette-row-heading">Original</span>
               <PaletteRows
                 colors={colors}
@@ -298,17 +307,16 @@ export function PaletteControls({
                         generated?.length === colors.length ? generated : colors
                       }
                       variant={mode}
-                      hideRoles
-                      picks={
-                        generated?.length === colors.length
-                          ? harmony.palette?.[mode].picks
-                          : undefined
-                      }
                       brightnessFilter={brightnessFilter}
                       pending={harmony.pending}
                     />
                     {tokenTracks.map((track) => (
                       <ThemeTokenSlots
+                        onDragChange={(dragging) =>
+                          setDragSnapshot(
+                            dragging ? (harmony.palette ?? null) : null,
+                          )
+                        }
                         key={track[0]}
                         onPreview={(role, position) =>
                           setDragPreview((current) =>
@@ -323,9 +331,15 @@ export function PaletteControls({
                         }
                         mode={mode}
                         count={colors.length}
-                        picks={(
-                          harmony.palette?.[mode].tokenPicks ?? []
-                        ).filter((pick) => track.includes(pick.role))}
+                        picks={(harmony.palette?.[mode].tokenPicks ?? [])
+                          .filter((pick) => track.includes(pick.role))
+                          .map((pick) => ({
+                            ...pick,
+                            position:
+                              dragSnapshot?.[mode].tokenPicks.find(
+                                (original) => original.role === pick.role,
+                              )?.position ?? pick.position,
+                          }))}
                         onMove={(role, position) =>
                           onChange({
                             theme: {

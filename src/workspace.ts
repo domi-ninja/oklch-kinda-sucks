@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect } from "react";
 import { useWorkspaceHistory } from "./useWorkspaceHistory";
-import { sameColor, type WorkspaceChange } from "./workspaceHistory";
+import { sameColor } from "./workspaceHistory";
 import { normalizePresets } from "./presets";
 export {
   pickerModes,
@@ -10,6 +10,7 @@ export {
 import {
   workspaceSchema,
   colorSchema,
+  paletteSchema,
   pickerModes,
   type Workspace,
   type PresetShare,
@@ -52,7 +53,67 @@ export function colorFromHash(hash: string): Color | null {
 export function workspaceHash(
   state: Pick<Workspace, "color" | "pickers" | "palette">,
 ) {
-  return `${colorHash(pickedColor(state))}&pickers=${state.pickers.map((picker) => picker.mode).join(",")}`;
+  let hash = `${colorHash(pickedColor(state))}&pickers=${state.pickers.map((picker) => picker.mode).join(",")}`;
+  if (state.palette) {
+    const palette = state.palette;
+    hash += `&palette=1&start=${colorHash(state.color).slice(7)}&end=${colorHash(palette.end).slice(7)}&point=${palette.endpoint}&steps=${palette.subdivisions}&interpolation=${palette.mode}&mode=${palette.theme?.mapping ?? "contrast"}&chroma=${palette.theme?.chroma ?? 1}`;
+    if (palette.middle) hash += `&middle=${colorHash(palette.middle).slice(7)}`;
+    if (
+      palette.theme &&
+      Object.values(palette.theme.positions).some(
+        (positions) => Object.keys(positions).length,
+      )
+    )
+      hash += `&positions=${encodeURIComponent(JSON.stringify(palette.theme.positions))}`;
+  }
+  return hash;
+}
+
+export function restoreWorkspaceHash(
+  previous: Workspace,
+  hash: string,
+): Workspace {
+  if (workspaceHash(previous) === hash) return previous;
+  const params = new URLSearchParams(hash.slice(1));
+  const color = colorFromHash(hash);
+  let state = previous;
+  if (color || params.has("palette")) {
+    let palette: Workspace["palette"];
+    let start = color ?? previous.color;
+    if (params.get("palette") === "1") {
+      try {
+        const readColor = (key: string) =>
+          colorFromHash(`#color=${params.get(key) ?? ""}`);
+        const parsed = paletteSchema.safeParse({
+          end: readColor("end"),
+          middle: params.has("middle") ? readColor("middle") : undefined,
+          endpoint: params.get("point") ?? "start",
+          subdivisions: Number(params.get("steps")),
+          mode: params.get("interpolation"),
+          theme: {
+            mapping: params.get("mode") ?? "contrast",
+            chroma: Number(params.get("chroma") ?? 1),
+            positions: params.has("positions")
+              ? JSON.parse(params.get("positions")!)
+              : { light: {}, dark: {} },
+          },
+        });
+        const paletteStart = readColor("start");
+        if (parsed.success && paletteStart) {
+          palette = parsed.data;
+          start = paletteStart;
+        }
+      } catch {
+        /* Discard invalid palette URL data. */
+      }
+    }
+    state = { ...previous, color: start, palette, selected: null };
+    if (color) state = withPickedColor(state, color);
+  }
+  return {
+    ...state,
+    pickers: pickersFromHash(hash, state.pickers) ?? state.pickers,
+  };
 }
 
 function pickersFromHash(hash: string, existing: Workspace["pickers"]) {
@@ -115,14 +176,7 @@ function readWorkspace(initial: () => Workspace) {
   } catch {
     /* Continue in memory when browser storage is unavailable. */
   }
-  const color = colorFromHash(location.hash);
-  const pickers = pickersFromHash(location.hash, state.pickers);
-  return {
-    ...(color && colorHash(pickedColor(state)) !== colorHash(color)
-      ? { ...withPickedColor(state, color), selected: null }
-      : state),
-    pickers: pickers ?? state.pickers,
-  };
+  return restoreWorkspaceHash(state, location.hash);
 }
 
 export function useWorkspace(initial: () => Workspace, shared?: PresetShare) {
@@ -155,14 +209,7 @@ export function useWorkspace(initial: () => Workspace, shared?: PresetShare) {
   );
   useEffect(function restoreColorNavigation() {
     const restore = () => {
-      const color = colorFromHash(location.hash);
-      setState((previous) => ({
-        ...(color
-          ? { ...withPickedColor(previous, color), selected: null }
-          : previous),
-        pickers:
-          pickersFromHash(location.hash, previous.pickers) ?? previous.pickers,
-      }));
+      setState((previous) => restoreWorkspaceHash(previous, location.hash));
     };
     window.addEventListener("popstate", restore);
     window.addEventListener("hashchange", restore);
@@ -186,14 +233,11 @@ export function useWorkspace(initial: () => Workspace, shared?: PresetShare) {
   }
   const setColor = (color: Color, record = true) =>
     setState((previous) => withPickedColor(previous, color), record);
-  const editWorkspace = (change: WorkspaceChange, group: object) =>
-    setState(change, true, group);
   return {
     state,
     set,
     setColor,
     updateState,
-    editWorkspace,
     ...historyControls,
   };
 }

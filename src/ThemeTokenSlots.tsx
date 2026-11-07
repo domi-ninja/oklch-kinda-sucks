@@ -10,12 +10,14 @@ export function ThemeTokenSlots({
   picks,
   onMove,
   onPreview,
+  onDragChange,
 }: {
   mode: ThemeMode;
   count: number;
   picks: ThemePalette["picks"];
   onMove: (role: string, position: number) => void;
   onPreview: (role: string, position: number | null) => void;
+  onDragChange: (dragging: boolean) => void;
 }) {
   const row = useRef<HTMLDivElement>(null);
   const originalPicks = useRef(picks);
@@ -51,35 +53,18 @@ export function ThemeTokenSlots({
       (pick) => pick.role !== role && slotOf(pick.position) === slot,
     );
   const target = (x: number, y: number) => {
-    const visible = row
-      .current!.closest(".palette-scale-scroll")!
-      .getBoundingClientRect();
-    if (
-      x < visible.left ||
-      x > visible.right ||
-      y < visible.top ||
-      y > visible.bottom
-    )
-      return -1;
-    const bounds = row.current!.getBoundingClientRect();
-    if (
-      y < bounds.top ||
-      y > bounds.bottom ||
-      x < bounds.left ||
-      x > bounds.right
-    )
-      return -1;
-    return Math.min(
-      count - 1,
-      Math.floor(((x - bounds.left) / bounds.width) * count),
-    );
+    const cell = document
+      .elementFromPoint(x, y)
+      ?.closest<HTMLElement>("[data-token-slot]");
+    return cell && row.current?.contains(cell)
+      ? Number(cell.dataset.tokenSlot)
+      : -1;
   };
   return (
     <div
       ref={row}
       className="theme-token-slots"
       aria-label={`${mode} token positions`}
-      style={{ gridTemplateColumns: `repeat(${count}, minmax(0, 1fr))` }}
     >
       {Array.from({ length: count }, (_, slot) => (
         <div
@@ -129,22 +114,21 @@ export function ThemeTokenSlots({
                 onPointerDown={(event) => {
                   if (event.button !== 0) return;
                   originalPicks.current = picks;
+                  onDragChange(true);
                   event.currentTarget.setPointerCapture(event.pointerId);
                   setDrag({ role: pick.role, slot });
                 }}
                 onPointerMove={(event) => {
                   if (!event.currentTarget.hasPointerCapture(event.pointerId))
                     return;
-                  const scroll = row.current?.closest(".palette-scale-scroll");
-                  if (scroll) {
-                    const bounds = scroll.getBoundingClientRect();
-                    scroll.scrollLeft +=
-                      event.clientX > bounds.right - 24
+                  const scroll = row.current?.closest(".workspace");
+                  if (scroll)
+                    scroll.scrollTop +=
+                      event.clientY > innerHeight - 24
                         ? 12
-                        : event.clientX < bounds.left + 24
+                        : event.clientY < 24
                           ? -12
                           : 0;
-                  }
                   const next = target(event.clientX, event.clientY);
                   setDrag({ role: pick.role, slot: next });
                   onPreview(
@@ -159,16 +143,19 @@ export function ThemeTokenSlots({
                     return;
                   const next = target(event.clientX, event.clientY);
                   event.currentTarget.releasePointerCapture(event.pointerId);
+                  onDragChange(false);
                   setDrag(null);
                   onPreview(pick.role, null);
                   if (next !== slot && free(next, pick.role))
                     onMove(pick.role, next / (count - 1));
                 }}
                 onPointerCancel={() => {
+                  onDragChange(false);
                   setDrag(null);
                   onPreview(pick.role, null);
                 }}
                 onLostPointerCapture={() => {
+                  onDragChange(false);
                   setDrag(null);
                   onPreview(pick.role, null);
                 }}

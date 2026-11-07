@@ -6,7 +6,7 @@ export async function checkDemoForms(root: Page | FrameLocator) {
   const heading = root.locator("#project-heading");
   const savedName = await heading.textContent();
   await name.fill("   ");
-  await root.getByRole("button", { name: "Save changes", exact: true }).click();
+  await name.press("Enter");
   await expect(name).toHaveAttribute("aria-invalid", "true");
   await expect(name).toHaveAttribute("aria-describedby", "project-name-error");
   await expect(root.getByRole("alert")).toHaveText("Enter a project name.");

@@ -179,12 +179,6 @@ export default function App() {
                   />
                 </div>
               </div>
-              <Button
-                type="submit"
-                className="h-auto min-h-11 rounded-lg px-4 py-3"
-              >
-                Save changes
-              </Button>
             </form>
           </CardContent>
         </Card>
