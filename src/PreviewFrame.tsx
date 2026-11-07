@@ -1,5 +1,7 @@
 import { useLayoutEffect, useMemo, useRef } from "react";
 import { demoDocument } from "./demo";
+import axeUrl from "axe-core/axe.min.js?url";
+import previewA11y from "./previewA11y.js?raw";
 import previewBridge from "./previewBridge.js?raw";
 import type { Workspace } from "./workspaceSchema";
 
@@ -17,7 +19,11 @@ export function PreviewFrame({
   const frame = useRef<HTMLIFrameElement>(null);
   const latestTheme = useRef({ css, colors });
   const document = useMemo(
-    () => demoDocument("", false, dark, { script: previewBridge }),
+    () =>
+      demoDocument("", false, dark, {
+        script: previewBridge + "\n" + previewA11y,
+        scripts: [new URL(axeUrl, window.location.href).href],
+      }),
     [dark],
   );
   const sendStyles = () =>

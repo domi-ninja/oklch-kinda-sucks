@@ -177,6 +177,25 @@ export function PaletteControls({
               ))}
             </select>
           </label>
+          <label>
+            Harmonization
+            <select
+              aria-label="Harmonization"
+              value={settings.mapping ?? "apca"}
+              onChange={(event) =>
+                onChange({
+                  theme: {
+                    ...settings,
+                    mapping:
+                      event.target.value === "palette" ? "palette" : "apca",
+                  },
+                })
+              }
+            >
+              <option value="apca">APCA tones</option>
+              <option value="palette">Palette tones</option>
+            </select>
+          </label>
           <label className="palette-chroma">
             Chroma <output>{Math.round(settings.chroma * 100)}%</output>
             <input

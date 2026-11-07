@@ -20,6 +20,49 @@ const example = ["#a9ffeb", "#aacd85", "#ac8a39", "#944929", "#631436"].map(
 const rendered = (color: Color) =>
   formatCss(p3({ mode: "oklch", l: color.l, c: color.c, h: color.h }));
 
+test("APCA modes have multiple nearby tones and palette mode preserves already readable colors", () => {
+  const neutral = [0.85, 0.7, 0.55, 0.4, 0.25].map((l) => ({
+    l,
+    c: 0,
+    h: 0,
+    a: 1,
+  }));
+  const result = harmonizePalette(neutral);
+  expect(new Set(result.dark.colors.map((c) => c.l.toFixed(3))).size).toBe(5);
+  for (const c of result.dark.colors) {
+    expect(c.l).toBeLessThanOrEqual(0.39);
+    expect(c.l).toBeGreaterThan(0.17);
+  }
+  for (const c of result.light.colors) {
+    expect(c.l).toBeLessThanOrEqual(0.901);
+    expect(c.l).toBeGreaterThan(0.78);
+  }
+  expect(result.dark.tokens.background.l).toBeLessThan(
+    result.dark.tokens.card.l,
+  );
+  expect(result.dark.tokens.card.l).toBeLessThan(result.dark.tokens.muted.l);
+  expect(result.dark.tokens.muted.l).toBeLessThan(result.dark.tokens.border.l);
+  for (let hue = 0; hue < 360; hue += 30) {
+    const vivid = neutral.map((color, index) => ({
+      ...color,
+      c: 0.4,
+      h: (hue + index * 20) % 360,
+    }));
+    const mapped = harmonizePalette(vivid);
+    for (const color of mapped.light.colors)
+      expect(color.l).toBeLessThanOrEqual(0.901);
+    for (const color of mapped.dark.colors)
+      expect(color.l).toBeLessThanOrEqual(0.381);
+  }
+  const preserved = harmonizePalette(neutral, neutral, {
+    chroma: 1,
+    mapping: "palette",
+    positions: { light: {}, dark: {} },
+  });
+  expect(preserved.light.colors[0].l).toBeCloseTo(0.85, 5);
+  expect(preserved.dark.colors[4].l).toBeCloseTo(0.25, 5);
+});
+
 test("chroma can be boosted and token positions sample the same direction in both modes", () => {
   const normal = harmonizePalette(example);
   const vivid = harmonizePalette(example, example, {
@@ -191,28 +234,37 @@ test("Card can be dragged to an exact palette color and chroma has a compact qua
       ),
     )
     .toBe(0.5);
+  await page
+    .getByLabel("Harmonization", { exact: true })
+    .selectOption("palette");
+  await expect(apply).toBeEnabled();
+  await page.reload();
+  await expect(page.getByLabel("Harmonization", { exact: true })).toHaveValue(
+    "palette",
+  );
+  await expect(apply).toBeEnabled();
 });
 
 test("the supplied gradient produces distinct light/dark theme roles with pure black/white text", () => {
   const result = harmonizePalette(example);
   expect(result.light.colors).toHaveLength(5);
   expect(result.dark.colors).toHaveLength(5);
-  expect(result.light.tokens.background.l).toBeGreaterThan(0.97);
+  expect(result.light.tokens.background.l).toBeGreaterThan(0.85);
   expect(result.dark.tokens.background.l).toBeLessThan(0.2);
   for (const mode of ["light", "dark"] as const) {
     const palette = result[mode];
-    const background = mode === "light" ? "white" : "black";
+    const background = mode === "light" ? "black" : "white";
     const contrasts = palette.colors.map((color) =>
-      calcContrast(rendered(color), background, "apca", "p3"),
+      calcContrast(background, rendered(color), "apca", "p3"),
     );
-    expect(contrasts[2]).toBeCloseTo(72, 1);
+    expect(contrasts.every((value) => value >= 74.9)).toBe(true);
     expect(
       contrasts.every(
         (value, index) =>
           index === 0 ||
           (mode === "light"
-            ? value >= contrasts[index - 1]
-            : value <= contrasts[index - 1]),
+            ? value <= contrasts[index - 1]
+            : value >= contrasts[index - 1]),
       ),
     ).toBe(true);
     for (const [role, index] of [

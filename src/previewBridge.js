@@ -125,7 +125,11 @@
   function inspect() {
     pending = 0;
     if (pointer) active = document.elementFromPoint(pointer.x, pointer.y);
-    if (!active || !active.closest("main")) {
+    if (
+      !active ||
+      !active.closest("main") ||
+      active.closest("#preview-a11y-overlay")
+    ) {
       parent.postMessage(
         { type: "preview-hover", rect: null, tokens: [] },
         "*",

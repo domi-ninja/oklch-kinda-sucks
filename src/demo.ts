@@ -44,11 +44,12 @@ export const demoScript = String.raw`(() => {
   // Keep Tab inside the preview dialog, including when Chromium would leave the iframe.
   for (const dialog of document.querySelectorAll('dialog')) dialog.addEventListener('keydown', event => {
     if (event.key !== 'Tab') return;
-    const controls = dialog.querySelectorAll('input:not([disabled]),button:not([disabled])');
+    const controls = [...dialog.querySelectorAll('input:not([disabled]),button:not([disabled])'), ...(dialog.querySelector('#preview-a11y-overlay')?.shadowRoot?.querySelectorAll('button') ?? [])];
+    const focused = dialog.querySelector('#preview-a11y-overlay')?.shadowRoot?.activeElement ?? document.activeElement;
     const first = controls[0];
     const last = controls[controls.length - 1];
-    if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
-    else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    if (event.shiftKey && focused === first) { event.preventDefault(); last.focus(); }
+    else if (!event.shiftKey && focused === last) { event.preventDefault(); first.focus(); }
   });
   function showModal(dialog) {
     document.documentElement.style.overflow = 'hidden';
@@ -127,13 +128,13 @@ export function demoDocument(
   css: string,
   externalStylesheet = false,
   dark = false,
-  options: { script?: string } = {},
+  options: { script?: string; scripts?: string[] } = {},
 ) {
   const styles = externalStylesheet
     ? '<link rel="stylesheet" href="./styles.css">'
     : `<style id="preview-theme">${css.replace(/<\/style/gi, "<\\/style")}</style>`;
   const liveScript = options.script ? `;${options.script}` : "";
-  return `<!doctype html><html lang="en" class="${dark ? "dark" : ""}"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>shadcn/ui ${dark ? "dark" : "light"} preview</title>${styles}</head><body>${demoBody}<script>${demoScript}${liveScript}</script></body></html>`;
+  return `<!doctype html><html lang="en" class="${dark ? "dark" : ""}"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>shadcn/ui ${dark ? "dark" : "light"} preview</title>${styles}</head><body>${demoBody}${(options.scripts ?? []).map((url) => `<script defer src="${url}"></script>`).join("")}<script>${demoScript}${liveScript}</script></body></html>`;
 }
 export const candidates = [
   ...new Set(

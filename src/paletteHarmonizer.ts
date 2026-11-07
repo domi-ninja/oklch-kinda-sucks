@@ -6,7 +6,6 @@ import { clampColor } from "./colorBounds";
 import { interpolateCoordinates } from "./palette";
 
 export type ThemeMode = "light" | "dark";
-type Background = "black" | "white";
 const toP3 = toGamut("p3", "oklch", null, 0);
 const toOklch = converter("oklch");
 const black: Color = { l: 0, c: 0, h: 0, a: 1 };
@@ -16,10 +15,8 @@ function luminance(color: Color) {
   const rgb = toP3({ mode: "oklch", l: color.l, c: color.c, h: color.h });
   return displayP3toY([rgb.r, rgb.g, rgb.b]);
 }
-function contrast(color: Color, background: Background) {
-  return Math.abs(
-    APCAcontrast(luminance(color), background === "white" ? 1 : 0),
-  );
+function inkContrast(color: Color, ink: Color) {
+  return Math.abs(APCAcontrast(luminance(ink), luminance(color)));
 }
 export function themeInk(color: Color): Color {
   const y = luminance(color);
@@ -33,27 +30,17 @@ function fit(color: Color): Color {
   );
   return clampColor({ ...color, l: mapped.l, c: mapped.c, a: 1 });
 }
-function solve(color: Color, target: number, background: Background) {
+// Find the closest lightness meeting the text-on-fill contrast target.
+function solve(color: Color, target: number, ink: Color) {
   let low = 0;
   let high = 1;
-  let best = fit(color);
-  let error = Math.abs(contrast(best, background) - target);
-  for (let iteration = 0; iteration < 20; iteration++) {
-    const l = iteration === 0 ? 0 : iteration === 1 ? 1 : (low + high) / 2;
-    const candidate = fit({ ...color, l });
-    const measured = contrast(candidate, background);
-    const nextError = Math.abs(measured - target);
-    if (nextError < error) {
-      best = candidate;
-      error = nextError;
-    }
-    if (iteration < 2) continue;
-    const needsLighter =
-      background === "black" ? measured < target : measured > target;
-    if (needsLighter) low = l;
+  for (let i = 0; i < 22; i++) {
+    const l = (low + high) / 2;
+    const measured = inkContrast(fit({ ...color, l }), ink);
+    if (ink.l === 0 ? measured < target : measured > target) low = l;
     else high = l;
   }
-  return best;
+  return fit({ ...color, l: ink.l === 0 ? high : low });
 }
 
 // Source order is light to dark. Sample its hue/chroma path before retuning lightness for each mode.
@@ -83,49 +70,55 @@ export function harmonizePalette(
   };
   function generate(mode: ThemeMode) {
     const dark = mode === "dark";
-    const background: Background = dark ? "black" : "white";
-    const at = seed;
-    const surface = (color: Color, cap: number) => ({
-      ...color,
-      c: Math.min(color.c, cap + Math.max(0, settings.chroma - 1) * 0.4),
-    });
-    const first = fit({ ...surface(at(0), 0.008), l: 0.985 });
-    const last = fit({ ...surface(at(1), 0.018), l: 0.18 });
-    const from = contrast(first, background);
-    const to = contrast(last, background);
-    // Give the primary midpoint strong contrast, with a separate progression on either side.
-    const middle = 72;
+    const ink = dark ? white : black;
+    const first = fit({ ...seed(0), l: dark ? 0.38 : 0.9 });
+    const last = fit({ ...seed(1), l: dark ? 0.18 : 0.76 });
+    const startContrast = Math.max(75, inkContrast(first, ink));
+    const endContrast = Math.max(75, inkContrast(last, ink));
     const colorAt = (t: number) => {
-      if (t === 0) return first;
-      if (t === 1) return last;
-      const target =
-        t <= 0.5
-          ? from + (middle - from) * t * 2
-          : middle + (to - middle) * (t - 0.5) * 2;
-      return solve(at(t), target, background);
+      const sample = fit(seed(t));
+      if (settings.mapping === "palette") {
+        return inkContrast(sample, ink) >= 75 ? sample : solve(sample, 75, ink);
+      }
+      const adjusted = solve(
+        sample,
+        startContrast + (endContrast - startContrast) * t,
+        ink,
+      );
+      const bounded = fit({
+        ...adjusted,
+        l: Math.max(
+          dark ? 0.18 : 0.76,
+          Math.min(dark ? 0.38 : 0.9, adjusted.l),
+        ),
+      });
+      return inkContrast(bounded, ink) >= 75
+        ? bounded
+        : solve(bounded, 75, ink);
     };
     const positions: Record<string, number> = {
       background: dark ? 1 : 0,
-      card: dark ? 0.97 : 0.02,
-      popover: dark ? 0.97 : 0.02,
+      card: dark ? 0.75 : 0.25,
+      popover: dark ? 0.75 : 0.25,
       primary: 0.5,
       secondary: 0.25,
       accent: 0.75,
-      muted: dark ? 0.93 : 0.07,
-      border: dark ? 0.85 : 0.15,
-      input: dark ? 0.85 : 0.15,
+      muted: 0.5,
+      border: dark ? 0.25 : 0.75,
+      input: dark ? 0.25 : 0.75,
       ring: 0.5,
-      sidebar: dark ? 0.97 : 0.02,
+      sidebar: dark ? 0.75 : 0.25,
       "sidebar-primary": 0.5,
       "sidebar-accent": 0.75,
-      "sidebar-border": dark ? 0.85 : 0.15,
+      "sidebar-border": dark ? 0.25 : 0.75,
       "sidebar-ring": 0.5,
     };
     const tokens: Record<string, Color> = {};
     for (const [role, fallback] of Object.entries(positions)) {
       positions[role] = settings.positions[mode][role] ?? fallback;
       const sample = colorAt(positions[role]);
-      tokens[role] =
+      const automaticSurface =
+        settings.mapping !== "palette" &&
         settings.positions[mode][role] === undefined &&
         [
           "background",
@@ -136,9 +129,17 @@ export function harmonizePalette(
           "input",
           "sidebar",
           "sidebar-border",
-        ].includes(role)
-          ? fit(surface(sample, role === "background" ? 0.018 : 0.025))
-          : sample;
+        ].includes(role);
+      const fill = automaticSurface
+        ? fit({
+            ...sample,
+            c: Math.min(
+              sample.c,
+              (role === "background" ? 0.012 : 0.02) * settings.chroma,
+            ),
+          })
+        : sample;
+      tokens[role] = inkContrast(fill, ink) >= 75 ? fill : solve(fill, 75, ink);
     }
     for (const role of [
       "foreground",
@@ -154,14 +155,7 @@ export function harmonizePalette(
     ]) {
       const fill =
         role === "foreground" ? "background" : role.replace(/-foreground$/, "");
-      const chosen = settings.positions[mode][role];
-      tokens[role] =
-        chosen === undefined
-          ? themeInk(tokens[fill])
-          : colorAt(chosen).l >= 0.5
-            ? white
-            : black;
-      positions[role] = chosen ?? (tokens[role].l === 1 ? 0 : 1);
+      tokens[role] = themeInk(tokens[fill]);
     }
     return {
       colors: input.map((_, index) =>
