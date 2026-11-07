@@ -455,35 +455,6 @@ select {
   background: #bcbcbc;
   color: #202020;
 }
-.mode-generator {
-  display: grid;
-  gap: 16px;
-  padding: 16px;
-}
-.mode-generator > select {
-  width: 100%;
-  margin: 0;
-}
-.mode-parameter {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 86px;
-  gap: 8px;
-  align-items: center;
-  min-width: 0;
-}
-.mode-parameter > label {
-  grid-column: 1 / -1;
-}
-.mode-parameter > input {
-  min-width: 0;
-  width: 100%;
-  background-image: linear-gradient(#999999, #999999);
-}
-.mode-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
 .token {
   display: grid;
   grid-template-columns: 24px minmax(0, 1fr);
@@ -813,8 +784,7 @@ select {
   .slider-row {
     grid-template-columns: minmax(0, 1fr);
   }
-  .slider-row input[type="range"],
-  .mode-parameter > input[type="range"] {
+  .slider-row input[type="range"] {
     height: 44px;
     background-size: 100% 14px;
     background-position: center;
@@ -825,8 +795,6 @@ select {
     min-width: 0;
     min-height: 44px;
   }
-  .mode-generator > select,
-  .mode-actions button,
   .preset-actions button {
     min-height: 44px;
   }

@@ -1,6 +1,6 @@
 import { converter } from "culori";
 import { cssColor, type Color } from "./color";
-import { readThemeColors } from "./modeGeneration";
+import { readThemeColors } from "./themeColors";
 import {
   themeInk,
   type HarmonizedPalettes,

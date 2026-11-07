@@ -51,12 +51,6 @@ test("sharing carries only the current preset and import preserves the receiver'
       subdivisions: 3,
       mode: "RGB",
     } as const,
-    modeGeneration: {
-      from: "dark",
-      background: 0.98,
-      contrast: 1.1,
-      chroma: 0.9,
-    } as const,
     saved: [
       { id: "custom", name: "Existing palette", source: "existing stylesheet" },
       privatePreset,
@@ -72,7 +66,6 @@ test("sharing carries only the current preset and import preserves the receiver'
   expect(imported.source).toBe(workspace.source);
   expect(imported.color).toEqual(receiver.color);
   expect(imported.palette).toEqual(receiver.palette);
-  expect(imported.modeGeneration).toEqual(receiver.modeGeneration);
   expect(imported.pickers).toEqual(receiver.pickers);
   expect(imported.width).toBe(receiver.width);
   expect(imported.tab).toBe(receiver.tab);

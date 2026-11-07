@@ -25,13 +25,6 @@ export const paletteSchema = z
   );
 export type Palette = z.infer<typeof paletteSchema>;
 export type PaletteEndpoint = Palette["endpoint"];
-export const modeGenerationSchema = z.object({
-  from: z.enum(["light", "dark"]),
-  background: z.number().min(0).max(1),
-  contrast: z.number().min(0.5).max(1.5),
-  chroma: z.number().min(0).max(1.5),
-});
-export type ModeGeneration = z.infer<typeof modeGenerationSchema>;
 export const harmonizerSchema = z
   .object({
     rows: z
@@ -79,7 +72,6 @@ export const workspaceSchema = z.object({
   source: z.string(),
   color: colorSchema,
   palette: paletteSchema.optional(),
-  modeGeneration: modeGenerationSchema.optional(),
   harmonizer: harmonizerSchema.optional(),
   selected: z.number().int().nonnegative().nullable(),
   tab: z.enum(["preview", "source", "compiled"]),

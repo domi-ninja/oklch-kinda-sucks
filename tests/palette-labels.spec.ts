@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { paletteTextColor } from "../src/paletteContrast";
 import { calcContrast } from "apcach";
-import { readThemeColors } from "../src/modeGeneration";
+import { readThemeColors } from "../src/themeColors";
 
 test("APCA label colors account for polarity, hue, and both checker shades", () => {
   for (const space of ["srgb", "display-p3"] as const) {

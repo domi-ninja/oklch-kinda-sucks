@@ -8,7 +8,7 @@ Compare RGB, HSL, HCL, and OKHCL colors and build shadcn/ui themes.
 2. Adjust it with the picker, sliders, or color fields. Add pickers to compare color spaces. Light and dark previews update together.
 3. Save your changes in this browser, use Save as new for a copy, or Discard changes to restore the preset.
 
-Use Create palette for a gradient between two colors. Use Light → dark or Dark → light above the theme colors to generate the other mode.
+Use Create palette to build a gradient and preview its harmonized light and dark themes. Apply palette to preset fills both modes of the current theme.
 
 ## Share or export
 
@@ -20,6 +20,6 @@ Saved presets and unfinished work stay in your browser. Clearing browser storage
 
 ## Guides
 
-- [Using the app](docs/usage.md): palettes, generation, color formats, and exported apps.
+- [Using the app](docs/usage.md): palettes, color formats, and exported apps.
 - [Development](docs/development.md): local setup, tests, architecture, and deployment.
 - [Sharing and storage](docs/sharing.md): URL and persistence rules for developers and agents.

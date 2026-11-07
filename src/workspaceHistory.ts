@@ -62,7 +62,6 @@ function isEdit(a: Workspace, b: Workspace) {
     a.active !== b.active ||
     !sameColor(a.color, b.color) ||
     paletteChanged ||
-    !sameFields(a.modeGeneration, b.modeGeneration) ||
     !sameItems(a.pickers, b.pickers) ||
     !sameItems(a.saved, b.saved)
   );

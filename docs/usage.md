@@ -62,12 +62,6 @@ The initial grid has nine levels and five hues. APCA fields set contrast targets
 
 Hue rows, levels, backgrounds, and settings save in this browser and support undo. Using the grid changes the palette, not the preset stylesheet. The grid's intermediate colors follow its contrast targets; the palette's intermediate colors follow its interpolation mode. Harmonizer settings are excluded from both kinds of share link.
 
-## Generate the other theme mode
-
-Choose Light → dark or Dark → light above the theme colors. Adjust Background lightness, Contrast, and Chroma, then click Generate. Undo restores the previous stylesheet.
-
-Surfaces use OKHCL lightness. Body text, muted text, and button labels derive contrast from their matching surfaces. Text tint is limited separately from accent saturation. Generation preserves hue, alpha, and the source mode's colors. Generator controls stay local; generated colors are part of the preset stylesheet.
-
 ## Preview forms and dialogs
 
 Save changes validates the project name and focuses the field if it is blank. Edit notification email opens a dialog that validates the address format before saving. Cancel and Escape discard the email draft. Remove member opens a confirmation dialog; Cancel receives focus first. Restore member reverses a confirmed removal. These sample interactions reset on reload.

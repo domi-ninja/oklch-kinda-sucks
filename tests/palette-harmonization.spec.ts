@@ -3,7 +3,7 @@ import { converter, formatCss, toGamut } from "culori";
 import { calcContrast } from "apcach";
 import { harmonizePalette } from "../src/paletteHarmonizer";
 import { applyPaletteTheme, themePaletteCss } from "../src/applyPaletteTheme";
-import { readThemeColors } from "../src/modeGeneration";
+import { readThemeColors } from "../src/themeColors";
 import { baseTokens, sourceFor } from "../src/demo";
 import { createPaletteRamp } from "../src/palette";
 import { cssColor, type Color } from "../src/color";

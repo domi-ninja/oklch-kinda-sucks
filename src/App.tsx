@@ -15,8 +15,6 @@ import {
 import { Button } from "./components/ui/button";
 import { Picker } from "./Picker";
 import { PaletteControls } from "./PaletteControls";
-import { ModeGenerator } from "./ModeGenerator";
-import { defaultModeGeneration } from "./modeGeneration";
 import {
   applyPaletteTheme,
   palettePreviewColors,
@@ -680,15 +678,6 @@ export function App({ shared }: { shared?: PresetShare }) {
               )}
             </div>
           </section>
-          <ModeGenerator
-            source={source}
-            settings={state.modeGeneration ?? defaultModeGeneration}
-            onSettingsChange={(settings) => set("modeGeneration", settings)}
-            onApply={(next) => {
-              set("source", next);
-              set("selected", null);
-            }}
-          />
           <section className="panel theme-panel">
             <div className="panel-heading">
               <h2>shadcn/ui theme</h2>
