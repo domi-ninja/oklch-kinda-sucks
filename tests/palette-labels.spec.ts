@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { paletteTextColor } from "../src/paletteContrast";
 import { calcContrast } from "apcach";
+import { readThemeColors } from "../src/modeGeneration";
 
 test("APCA label colors account for polarity, hue, and both checker shades", () => {
   for (const space of ["srgb", "display-p3"] as const) {
@@ -26,6 +27,68 @@ test("APCA label colors account for polarity, hue, and both checker shades", () 
         space,
       ),
     ).toBe("#fff");
+  }
+});
+
+test("harmonized role labels identify the exact colors applied in both modes at any subdivision count", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/#color=0.95,0.03,170,1&pickers=OKHCL");
+  await page
+    .getByRole("button", { name: "Create palette", exact: true })
+    .click();
+  const apply = page.getByRole("button", {
+    name: "Apply palette to preset",
+    exact: true,
+  });
+  for (const subdivisions of [4, 3, 1]) {
+    await page
+      .getByLabel("Palette subdivisions", { exact: true })
+      .fill(String(subdivisions));
+    await expect(apply).toBeEnabled();
+    await apply.click();
+    const source = await page.evaluate(
+      () =>
+        JSON.parse(localStorage.getItem("oklch-workspace")!).source as string,
+    );
+    const { declarations } = readThemeColors(source);
+    for (const [index, mode] of (["light", "dark"] as const).entries()) {
+      const group = page.locator(".palette-mode-rows").nth(index);
+      await expect(group.locator(".palette-role")).toHaveText(
+        mode === "light"
+          ? ["Background", "Secondary", "Primary", "Accent"]
+          : ["Background", "Accent", "Primary", "Secondary"],
+      );
+      await expect(
+        page
+          .getByRole("list", { name: `Harmonized ${mode} colors`, exact: true })
+          .getByRole("listitem"),
+      ).toHaveCount(subdivisions + 1);
+      for (const role of ["background", "primary", "secondary", "accent"]) {
+        const swatch = group
+          .locator("li")
+          .filter({ has: page.locator(".palette-role", { hasText: role }) });
+        const token = declarations.find(
+          (entry) => entry.mode === mode && entry.name === `--color-${role}`,
+        )!;
+        expect(await swatch.getAttribute("title")).toContain(token.value);
+        const label = swatch.locator(".palette-role");
+        expect(
+          await label.evaluate((element) => getComputedStyle(element).color),
+        ).toMatch(/^rgb\((?:0, 0, 0|255, 255, 255)\)$/);
+        const bounds = await label.evaluate((element) => ({
+          label: element.getBoundingClientRect().width,
+          cell: element.parentElement!.getBoundingClientRect().width,
+        }));
+        expect(bounds.label).toBeLessThanOrEqual(bounds.cell);
+      }
+    }
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth > innerWidth,
+      ),
+    ).toBe(false);
   }
 });
 

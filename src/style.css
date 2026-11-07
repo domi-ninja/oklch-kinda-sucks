@@ -253,12 +253,39 @@ h2 {
   font-weight: 600;
   white-space: nowrap;
 }
-.palette-strip li > span {
+.palette-strip li > span:first-child {
   display: block;
   height: 44px;
 }
-.palette-brightness li > span {
+.palette-brightness li > span:first-child {
   height: 22px;
+}
+.palette-with-roles li > span:first-child {
+  height: 66px;
+}
+.palette-with-roles .palette-hex {
+  bottom: 22px;
+}
+.palette-role {
+  text-align: center;
+  white-space: nowrap;
+}
+.palette-with-roles .palette-role {
+  position: absolute;
+  inset: auto 0 0;
+  line-height: 22px;
+}
+.palette-extra-picks {
+  display: flex;
+  gap: 4px;
+}
+.palette-extra-picks li {
+  display: grid;
+  place-items: center;
+  min-width: 88px;
+  padding: 4px;
+  border: 1px solid #838383;
+  border-radius: 4px;
 }
 .palette-row-heading {
   position: sticky;

@@ -114,9 +114,15 @@ export function harmonizePalette(input: Color[], path = input) {
       l: first.l + (dark ? 0.16 : -0.12),
       c: Math.min(at(0.15).c, 0.02),
     });
-    const primary = colorAt(0.5);
-    const secondary = colorAt(dark ? 0.75 : 0.25);
-    const accent = colorAt(dark ? 0.25 : 0.75);
+    const positions = {
+      background: 0,
+      secondary: dark ? 0.75 : 0.25,
+      primary: 0.5,
+      accent: dark ? 0.25 : 0.75,
+    };
+    const primary = colorAt(positions.primary);
+    const secondary = colorAt(positions.secondary);
+    const accent = colorAt(positions.accent);
     const foreground = dark ? white : black;
     const tokens: Record<string, Color> = {
       background: first,
@@ -150,6 +156,9 @@ export function harmonizePalette(input: Color[], path = input) {
         colorAt(index / Math.max(1, input.length - 1)),
       ),
       tokens,
+      picks: Object.entries(positions)
+        .map(([role, position]) => ({ role, position, color: tokens[role] }))
+        .sort((a, b) => a.position - b.position),
     };
   }
   return { light: generate("light"), dark: generate("dark") };

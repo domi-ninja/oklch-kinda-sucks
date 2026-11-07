@@ -50,6 +50,8 @@ Apply palette to preset fills both modes of the current preset draft: background
 
 Hover over the palette panel to try its mapped light and dark colors in the component previews. Moving the mouse outside restores the current preset. Hovering does not save changes or add an undo step, and preview scroll positions and form inputs stay in place.
 
+The harmonized swatches label the colors picked for Background, Primary, Secondary, and Accent. If a picked color falls between the displayed steps, its exact color appears as an additional labeled swatch below that strip.
+
 Copy light theme and Copy dark theme copy the generated token declarations for their respective modes.
 
 ### Harmonizer

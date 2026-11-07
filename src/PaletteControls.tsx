@@ -197,6 +197,11 @@ export function PaletteControls({
                         generated?.length === colors.length ? generated : colors
                       }
                       variant={mode}
+                      picks={
+                        generated?.length === colors.length
+                          ? harmony.palette?.[mode].picks
+                          : undefined
+                      }
                       brightnessFilter={brightnessFilter}
                       pending={harmony.pending}
                     />
