@@ -83,13 +83,14 @@ export const demoScript = String.raw`(() => {
   const emailDialog = document.getElementById('email-dialog');
   const emailInput = document.getElementById('notification-email');
   const emailTrigger = document.getElementById('edit-email');
-  const validateEmail = () => errorFor(emailInput, !emailInput.value.trim() ? 'Enter an email address.' : emailInput.validity.typeMismatch ? 'Enter a valid email address, such as name@example.com.' : null, 'notification-email-error');
+  const validateEmail = () => errorFor(emailInput, !emailInput.value.trim() ? 'Enter an email address.' : !emailInput.value.includes('@') ? 'Include an @ sign in the email address.' : emailInput.validity.typeMismatch ? 'Enter a valid email address, such as name@example.com.' : null, 'notification-email-error');
   emailTrigger.onclick = () => {
     emailInput.value = email;
     errorFor(emailInput, null, 'notification-email-error');
     showModal(emailDialog);
   };
   emailInput.addEventListener('input', () => { if (emailInput.getAttribute('aria-invalid') === 'true') validateEmail(); });
+  emailInput.addEventListener('blur', validateEmail);
   document.getElementById('cancel-email').onclick = () => emailDialog.close();
   emailDialog.addEventListener('close', () => emailTrigger.focus({ preventScroll: true }));
   document.getElementById('email-form').addEventListener('submit', event => {

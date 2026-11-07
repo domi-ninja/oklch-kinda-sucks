@@ -27,9 +27,11 @@ export function NotificationEmailDialog({
   const validate = (field: HTMLInputElement) =>
     !field.value.trim()
       ? "Enter an email address."
-      : field.validity.typeMismatch
-        ? "Enter a valid email address, such as name@example.com."
-        : null;
+      : !field.value.includes("@")
+        ? "Include an @ sign in the email address."
+        : field.validity.typeMismatch
+          ? "Enter a valid email address, such as name@example.com."
+          : null;
   return (
     <Dialog
       open={open}
@@ -92,6 +94,7 @@ export function NotificationEmailDialog({
               aria-invalid={!!error}
               aria-describedby={error ? "notification-email-error" : undefined}
               className="h-auto min-h-11 bg-background p-3 text-base md:text-base aria-invalid:border-destructive"
+              onBlur={(event) => setError(validate(event.currentTarget))}
               onChange={(event) => {
                 setDraft(event.target.value);
                 if (error) setError(validate(event.currentTarget));

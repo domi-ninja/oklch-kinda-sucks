@@ -41,10 +41,23 @@ export async function checkDemoForms(root: Page | FrameLocator) {
   });
   await email.focus();
   await email.fill("not-an-email");
+  await email.press("Tab");
+  await expect(dialog.getByRole("alert")).toHaveText(
+    "Include an @ sign in the email address.",
+  );
+  await expect(email).toHaveAttribute(
+    "aria-describedby",
+    "notification-email-error",
+  );
   await dialog.getByRole("button", { name: "Save email", exact: true }).click();
   await expect(dialog).toBeVisible();
   await expect(email).toBeFocused();
   await expect(email).toHaveAttribute("aria-invalid", "true");
+  await expect(dialog.getByRole("alert")).toHaveText(
+    "Include an @ sign in the email address.",
+  );
+  await email.fill("name@");
+  await dialog.getByRole("button", { name: "Save email", exact: true }).click();
   await expect(dialog.getByRole("alert")).toHaveText(
     "Enter a valid email address, such as name@example.com.",
   );
