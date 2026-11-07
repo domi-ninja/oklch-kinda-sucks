@@ -56,8 +56,11 @@ test("harmonized role labels identify the exact colors applied in both modes at 
     for (const [index, mode] of (["light", "dark"] as const).entries()) {
       const group = page.locator(".palette-mode-rows").nth(index);
       expect(
-        (await group.locator(".palette-role").allTextContents())
+        (await group.locator(".theme-token-handle").allTextContents())
           .map((value) => value.trim())
+          .filter((value) =>
+            ["Accent", "Background", "Primary", "Secondary"].includes(value),
+          )
           .sort(),
       ).toEqual(["Accent", "Background", "Primary", "Secondary"]);
       await expect(
@@ -66,17 +69,15 @@ test("harmonized role labels identify the exact colors applied in both modes at 
           .getByRole("listitem"),
       ).toHaveCount(subdivisions + 1);
       for (const role of ["background", "primary", "secondary", "accent"]) {
-        const swatch = group
-          .locator("li")
-          .filter({ has: page.locator(".palette-role", { hasText: role }) });
+        const swatch = group.getByRole("button", {
+          name: `${mode} ${role}`,
+          exact: true,
+        });
         const token = declarations.find(
           (entry) => entry.mode === mode && entry.name === `--color-${role}`,
         )!;
         expect(await swatch.getAttribute("title")).toContain(token.value);
-        const label = swatch.locator(".palette-role");
-        expect(
-          await label.evaluate((element) => getComputedStyle(element).color),
-        ).toMatch(/^rgb\((?:0, 0, 0|255, 255, 255)\)$/);
+        const label = swatch;
         const bounds = await label.evaluate((element) => ({
           label: element.getBoundingClientRect().width,
           cell: element.parentElement!.getBoundingClientRect().width,

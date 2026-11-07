@@ -1,8 +1,15 @@
-import { useId, useLayoutEffect, useState, type CSSProperties } from "react";
+import {
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useState,
+  type CSSProperties,
+} from "react";
 import { Copy } from "lucide-react";
 import { Button } from "./components/ui/button";
 import { NumericInput } from "./NumericInput";
 import { checkerColors, cssColor, type Color } from "./color";
+import { ThemeTokenSlots } from "./ThemeTokenSlots";
 import { PaletteRows } from "./PaletteRows";
 import { useHarmonizedPalette } from "./useHarmonizedPalette";
 import { defaultPaletteTheme } from "./paletteHarmonizer";
@@ -18,6 +25,11 @@ import {
   type Palette,
   type PaletteEndpoint,
 } from "./workspaceSchema";
+
+const tokenTracks = [
+  ["background", "secondary", "primary", "accent"],
+  ["card"],
+];
 
 export function PaletteControls({
   start,
@@ -49,19 +61,42 @@ export function PaletteControls({
   onPreviewChange: (palettes: HarmonizedPalettes | null) => void;
 }) {
   const brightnessFilter = useId();
-  const harmony = useHarmonizedPalette(colors, path, palette.theme);
+  const settings = palette.theme ?? defaultPaletteTheme;
+  const [dragPreview, setDragPreview] = useState<{
+    mode: ThemeMode;
+    role: string;
+    position: number;
+  } | null>(null);
+  const previewSettings = useMemo(
+    () =>
+      dragPreview
+        ? {
+            ...settings,
+            positions: {
+              ...settings.positions,
+              [dragPreview.mode]: {
+                ...settings.positions[dragPreview.mode],
+                [dragPreview.role]: dragPreview.position,
+              },
+            },
+          }
+        : settings,
+    [settings, dragPreview],
+  );
+  const harmony = useHarmonizedPalette(colors, path, previewSettings);
   const [applyError, setApplyError] = useState("");
   const [hovered, setHovered] = useState(false);
   useLayoutEffect(
     function syncHoveredPalettePreview() {
       onPreviewChange(
-        hovered && !harmony.error ? (harmony.palette ?? null) : null,
+        (hovered || dragPreview) && !harmony.error
+          ? (harmony.palette ?? null)
+          : null,
       );
       return () => onPreviewChange(null);
     },
-    [hovered, harmony.palette, harmony.error, onPreviewChange],
+    [hovered, dragPreview, harmony.palette, harmony.error, onPreviewChange],
   );
-  const settings = palette.theme ?? defaultPaletteTheme;
   return (
     <section
       className="panel palette-panel"
@@ -142,23 +177,28 @@ export function PaletteControls({
               ))}
             </select>
           </label>
+          <label className="palette-chroma">
+            Chroma <output>{Math.round(settings.chroma * 100)}%</output>
+            <input
+              type="range"
+              aria-label="Palette chroma"
+              min="0"
+              max="1"
+              step="0.001"
+              aria-valuetext={`${Math.round(settings.chroma * 100)}%`}
+              value={Math.sqrt(settings.chroma / 3)}
+              onChange={(event) =>
+                onChange({
+                  theme: {
+                    ...settings,
+                    chroma: 3 * Number(event.target.value) ** 2,
+                  },
+                })
+              }
+            />
+          </label>
         </div>
-        <label className="palette-chroma">
-          Chroma <output>{Math.round(settings.chroma * 100)}%</output>
-          <input
-            type="range"
-            aria-label="Palette chroma"
-            min="0"
-            max="3"
-            step="0.01"
-            value={settings.chroma}
-            onChange={(event) =>
-              onChange({
-                theme: { ...settings, chroma: Number(event.target.value) },
-              })
-            }
-          />
-        </label>
+
         <div
           className="palette-scales"
           style={
@@ -208,16 +248,38 @@ export function PaletteControls({
                 const generated = harmony.palette?.[mode].colors;
                 return (
                   <div className="palette-mode-rows" key={mode}>
-                    <span className="palette-row-heading">
-                      Harmonized {mode}
-                      {harmony.pending ? " · generating…" : ""}
-                    </span>
+                    <div className="palette-harmony-heading">
+                      <span className="palette-row-heading">
+                        Harmonized {mode}
+                        {harmony.pending ? " · generating…" : ""}
+                      </span>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        aria-label={`Reset ${mode} token positions`}
+                        disabled={
+                          Object.keys(settings.positions[mode]).length === 0
+                        }
+                        onClick={() => {
+                          setDragPreview(null);
+                          onChange({
+                            theme: {
+                              ...settings,
+                              positions: { ...settings.positions, [mode]: {} },
+                            },
+                          });
+                        }}
+                      >
+                        Reset positions
+                      </Button>
+                    </div>
 
                     <PaletteRows
                       colors={
                         generated?.length === colors.length ? generated : colors
                       }
                       variant={mode}
+                      hideRoles
                       picks={
                         generated?.length === colors.length
                           ? harmony.palette?.[mode].picks
@@ -226,6 +288,41 @@ export function PaletteControls({
                       brightnessFilter={brightnessFilter}
                       pending={harmony.pending}
                     />
+                    {tokenTracks.map((track) => (
+                      <ThemeTokenSlots
+                        key={track[0]}
+                        onPreview={(role, position) =>
+                          setDragPreview((current) =>
+                            position === null
+                              ? null
+                              : current?.mode === mode &&
+                                  current.role === role &&
+                                  current.position === position
+                                ? current
+                                : { mode, role, position },
+                          )
+                        }
+                        mode={mode}
+                        count={colors.length}
+                        picks={(
+                          harmony.palette?.[mode].tokenPicks ?? []
+                        ).filter((pick) => track.includes(pick.role))}
+                        onMove={(role, position) =>
+                          onChange({
+                            theme: {
+                              ...settings,
+                              positions: {
+                                ...settings.positions,
+                                [mode]: {
+                                  ...settings.positions[mode],
+                                  [role]: position,
+                                },
+                              },
+                            },
+                          })
+                        }
+                      />
+                    ))}
                   </div>
                 );
               })}
@@ -236,64 +333,6 @@ export function PaletteControls({
               {harmony.error || applyError}
             </span>
           )}
-        </div>
-        <div className="palette-position-settings">
-          {(["light", "dark"] as const).map((mode) => (
-            <details key={mode} className="palette-token-positions">
-              <summary>
-                {mode === "light" ? "Light" : "Dark"} token positions
-              </summary>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() =>
-                  onChange({
-                    theme: {
-                      ...settings,
-                      positions: { ...settings.positions, [mode]: {} },
-                    },
-                  })
-                }
-              >
-                Reset positions
-              </Button>
-              {Object.entries(harmony.palette?.[mode].positions ?? {}).map(
-                ([role, position]) => (
-                  <label className="palette-token-position" key={role}>
-                    <span>{role}</span>
-                    <output>
-                      {Math.round(
-                        (settings.positions[mode][role] ?? position) * 100,
-                      )}
-                      %
-                    </output>
-                    <input
-                      type="range"
-                      aria-label={`${mode} ${role} position`}
-                      min="0"
-                      max="1"
-                      step="0.01"
-                      value={settings.positions[mode][role] ?? position}
-                      onChange={(event) =>
-                        onChange({
-                          theme: {
-                            ...settings,
-                            positions: {
-                              ...settings.positions,
-                              [mode]: {
-                                ...settings.positions[mode],
-                                [role]: Number(event.target.value),
-                              },
-                            },
-                          },
-                        })
-                      }
-                    />
-                  </label>
-                ),
-              )}
-            </details>
-          ))}
         </div>
         <div className="palette-actions">
           <span>{colors.length} colors</span>

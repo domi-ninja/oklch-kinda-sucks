@@ -125,18 +125,20 @@ export function harmonizePalette(
     for (const [role, fallback] of Object.entries(positions)) {
       positions[role] = settings.positions[mode][role] ?? fallback;
       const sample = colorAt(positions[role]);
-      tokens[role] = [
-        "background",
-        "card",
-        "popover",
-        "muted",
-        "border",
-        "input",
-        "sidebar",
-        "sidebar-border",
-      ].includes(role)
-        ? fit(surface(sample, role === "background" ? 0.018 : 0.025))
-        : sample;
+      tokens[role] =
+        settings.positions[mode][role] === undefined &&
+        [
+          "background",
+          "card",
+          "popover",
+          "muted",
+          "border",
+          "input",
+          "sidebar",
+          "sidebar-border",
+        ].includes(role)
+          ? fit(surface(sample, role === "background" ? 0.018 : 0.025))
+          : sample;
     }
     for (const role of [
       "foreground",
@@ -167,6 +169,13 @@ export function harmonizePalette(
       ),
       tokens,
       positions,
+      tokenPicks: Object.entries(positions)
+        .filter(([role]) =>
+          ["background", "secondary", "primary", "accent", "card"].includes(
+            role,
+          ),
+        )
+        .map(([role, position]) => ({ role, position, color: tokens[role] })),
       picks: Object.entries(positions)
         .filter(([role]) =>
           ["background", "primary", "secondary", "accent"].includes(role),

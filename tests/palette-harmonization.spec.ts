@@ -6,7 +6,7 @@ import { applyPaletteTheme, themePaletteCss } from "../src/applyPaletteTheme";
 import { readThemeColors } from "../src/themeColors";
 import { baseTokens, sourceFor } from "../src/demo";
 import { createPaletteRamp } from "../src/palette";
-import { cssColor, type Color } from "../src/color";
+import { cssColor, parseColor, type Color } from "../src/color";
 import { workspaceSchema } from "../src/workspaceSchema";
 
 const toOklch = converter("oklch");
@@ -42,9 +42,10 @@ function foreground(color: Color) {
   expect(color.a).toBe(1);
 }
 
-test("chroma and token ratio controls persist, reset, and undo", async ({
+test("token drag previews a free target before committing and rejects occupied slots", async ({
   page,
 }) => {
+  await page.setViewportSize({ width: 1920, height: 1000 });
   await page.goto("/#color=0.8,0.15,90,1&pickers=OKHCL");
   await page
     .getByRole("button", { name: "Create palette", exact: true })
@@ -54,30 +55,142 @@ test("chroma and token ratio controls persist, reset, and undo", async ({
     exact: true,
   });
   await expect(apply).toBeEnabled();
-  await page
-    .getByRole("slider", { name: "Palette chroma", exact: true })
-    .fill("2");
-  const group = page.locator(".palette-token-positions").first();
-  await group.locator("summary").click();
-  const ratio = page.getByRole("slider", {
-    name: "light primary position",
+  const row = page.locator(".theme-token-slots").first();
+  await row.evaluate(
+    (el) => (el.closest(".palette-scale-scroll")!.scrollLeft = 2000),
+  );
+  const source = page.getByRole("button", {
+    name: "light secondary",
     exact: true,
   });
-  await ratio.fill("0.7");
+  await source.scrollIntoViewIfNeeded();
+  // Use nine steps so a free target remains visible alongside the token.
+  await page.getByLabel("Palette subdivisions", { exact: true }).fill("8");
   await expect(apply).toBeEnabled();
-  await page.reload();
-  await expect(
-    page.getByRole("slider", { name: "Palette chroma", exact: true }),
-  ).toHaveValue("2");
-  await expect(apply).toBeEnabled();
-  await group.locator("summary").click();
-  await expect(ratio).toHaveValue("0.7");
-  await group
-    .getByRole("button", { name: "Reset positions", exact: true })
-    .click();
-  await expect(ratio).toHaveValue("0.5");
+  await source.scrollIntoViewIfNeeded();
+  await row.evaluate((el) => {
+    el.closest(".palette-scale-scroll")!.scrollLeft = 176;
+  });
+  const from = (await source.boundingBox())!;
+  const target = row.locator('[data-token-slot="3"]');
+  const to = (await target.boundingBox())!;
+  const frame = page.frameLocator('iframe[data-preview-mode="light"]');
+  const color = () =>
+    frame
+      .locator("html")
+      .evaluate((el) =>
+        getComputedStyle(el).getPropertyValue("--color-secondary"),
+      );
+  await source.hover();
+  const before = await color();
+  const position = () =>
+    page.evaluate(
+      () =>
+        JSON.parse(localStorage.getItem("oklch-workspace")!).palette.theme
+          ?.positions.light.secondary,
+    );
+  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, {
+    steps: 8,
+  });
+  await expect.poll(color).not.toBe(before);
+  expect(await position()).toBeUndefined();
+  await page.mouse.up();
+  await expect.poll(position).toBe(0.375);
   await page.getByRole("button", { name: "Undo", exact: true }).click();
-  await expect(ratio).toHaveValue("0.7");
+  await expect.poll(position).toBeUndefined();
+  await expect(apply).toBeEnabled();
+  await source.scrollIntoViewIfNeeded();
+  await row.evaluate((el) => {
+    el.closest(".palette-scale-scroll")!.scrollLeft = 176;
+  });
+  const again = (await source.boundingBox())!;
+  const occupied = (await row.locator('[data-token-slot="4"]').boundingBox())!;
+  await page.mouse.move(again.x + again.width / 2, again.y + again.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(
+    occupied.x + occupied.width / 2,
+    occupied.y + occupied.height / 2,
+    { steps: 8 },
+  );
+  await page.mouse.up();
+  expect(await position()).toBeUndefined();
+  await source.focus();
+  await source.press("ArrowRight");
+  await expect.poll(position).toBe(0.375);
+  await page.reload();
+  await expect(apply).toBeEnabled();
+  expect(await position()).toBe(0.375);
+  await page
+    .getByRole("button", { name: "Reset light token positions", exact: true })
+    .click();
+  await expect.poll(position).toBeUndefined();
+  await page.getByRole("button", { name: "Undo", exact: true }).click();
+  await expect.poll(position).toBe(0.375);
+});
+
+test("Card can be dragged to an exact palette color and chroma has a compact quadratic response", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto("/#color=0.8,0.15,90,1&pickers=OKHCL");
+  await page
+    .getByRole("button", { name: "Create palette", exact: true })
+    .click();
+  const apply = page.getByRole("button", {
+    name: "Apply palette to preset",
+    exact: true,
+  });
+  await expect(apply).toBeEnabled();
+  const chroma = page.getByRole("slider", {
+    name: "Palette chroma",
+    exact: true,
+  });
+  await chroma.fill("0.5");
+  await expect(chroma).toHaveAttribute("aria-valuetext", "75%");
+  expect((await chroma.boundingBox())!.width).toBeLessThanOrEqual(150);
+  await expect(apply).toBeEnabled();
+  await expect(
+    page.locator(".palette-mode-rows").first().locator(".theme-token-handle"),
+  ).toHaveCount(5);
+  const card = page.getByRole("button", { name: "light card", exact: true });
+  await card.scrollIntoViewIfNeeded();
+  const lane = card.locator("../..");
+  await lane.evaluate((el) => {
+    el.closest(".palette-scale-scroll")!.scrollLeft = 0;
+  });
+  const from = (await card.boundingBox())!;
+  const to = (await lane.locator('[data-token-slot="2"]').boundingBox())!;
+  await card.hover();
+  const frame = page.frameLocator('iframe[data-preview-mode="light"]');
+  const color = () =>
+    frame
+      .locator("html")
+      .evaluate((el) => getComputedStyle(el).getPropertyValue("--color-card"));
+  const before = await color();
+  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(to.x + to.width / 2, to.y + 20, { steps: 8 });
+  await expect.poll(color).not.toBe(before);
+  const sample = await page
+    .getByRole("list", { name: "Harmonized light colors", exact: true })
+    .locator("li")
+    .nth(2)
+    .locator("span")
+    .first()
+    .evaluate((el) => el.style.background);
+  expect(parseColor(await color())).toEqual(parseColor(sample));
+  await page.mouse.up();
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          JSON.parse(localStorage.getItem("oklch-workspace")!).palette.theme
+            .positions.light.card,
+      ),
+    )
+    .toBe(0.5);
 });
 
 test("the supplied gradient produces distinct light/dark theme roles with pure black/white text", () => {

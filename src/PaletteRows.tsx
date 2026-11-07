@@ -14,12 +14,14 @@ const noPicks: ThemePalette["picks"] = [];
 export function PaletteRows({
   colors,
   variant,
+  hideRoles = false,
   picks = noPicks,
   brightnessFilter,
   pending = false,
 }: {
   colors: Color[];
   variant?: ThemeMode;
+  hideRoles?: boolean;
   picks?: ThemePalette["picks"];
   brightnessFilter: string;
   pending?: boolean;
@@ -61,7 +63,7 @@ export function PaletteRows({
       {[false, true].map((brightness) => (
         <ol
           key={String(brightness)}
-          className={`palette-strip${brightness ? " palette-brightness" : picks.length ? " palette-with-roles" : ""}`}
+          className={`palette-strip${brightness ? " palette-brightness" : picks.length && !hideRoles ? " palette-with-roles" : ""}`}
           aria-label={
             brightness
               ? variant
@@ -100,7 +102,7 @@ export function PaletteRows({
                     >
                       {labels[index].hex}
                     </code>
-                    {role && (
+                    {role && !hideRoles && (
                       <span
                         className="palette-role"
                         style={{ color: labels[index].color }}
@@ -115,7 +117,7 @@ export function PaletteRows({
           })}
         </ol>
       ))}
-      {extraPicks.length > 0 && (
+      {extraPicks.length > 0 && !hideRoles && (
         <ul
           className="palette-extra-picks"
           aria-label={`Harmonized ${variant} additional samples`}
