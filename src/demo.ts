@@ -147,7 +147,7 @@ export const baseTokens: Record<string, string> = {
   foreground: "oklch(0.21 0.018 180)",
   card: "oklch(1 0 0)",
   "card-foreground": "oklch(0.21 0.018 180)",
-  primary: "oklch(0.65 0.16 165)",
+  primary: "oklch(0.72 0.16 165)",
   "primary-foreground": "oklch(0.16 0.03 165)",
   secondary: "oklch(0.93 0.03 165)",
   "secondary-foreground": "oklch(0.3 0.05 165)",

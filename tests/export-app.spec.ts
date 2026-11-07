@@ -8,6 +8,7 @@ import { dirname, extname, join } from "node:path";
 import { createServer } from "node:http";
 import { once } from "node:events";
 import { parseColor } from "../src/color";
+import { baseTokens } from "../src/demo";
 import { checkDemoForms } from "./demo-form-checks";
 
 // Opt in because this check installs dependencies in a temporary exported project.
@@ -52,7 +53,7 @@ test("exported React project installs, builds, and runs every sample in both the
     });
     const source =
       (await editor.inputValue()).replace(
-        "oklch(0.65 0.16 165)",
+        baseTokens.primary,
         "oklch(0.6 0.2 30)",
       ) + "\n@theme { --color-ring: oklch(0.65 0.1 250); }";
     await editor.fill(source);

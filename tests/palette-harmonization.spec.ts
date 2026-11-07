@@ -58,7 +58,7 @@ test("a three-control palette produces a theme close to Mint Studio", () => {
   const result = harmonizePalette(ramp.colors, ramp.path, {
     mapping: "apca",
     chroma: 1,
-    positions: { light: {}, dark: {} },
+    positions: { light: { primary: 0.43 }, dark: { primary: 0.43 } },
   });
   const expected = readThemeColors(sourceFor(baseTokens, "")).declarations;
   const lab = converter("oklab");

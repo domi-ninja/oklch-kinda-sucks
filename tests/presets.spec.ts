@@ -19,8 +19,8 @@ test("discard restores built-in and saved custom presets, the selected picker, a
   await expect(preview).toHaveCSS("background-color", "oklch(0.7 0.2 45)");
   await page.setViewportSize({ width: 390, height: 844 });
   await discard.click();
-  await expect(picker).toHaveValue("oklch(0.65 0.16 165 / 100%)");
-  await expect(preview).toHaveCSS("background-color", "oklch(0.65 0.16 165)");
+  await expect(picker).toHaveValue("oklch(0.72 0.16 165 / 100%)");
+  await expect(preview).toHaveCSS("background-color", "oklch(0.72 0.16 165)");
   await picker.fill("oklch(0.7 0.2 45)");
   await page.getByRole("button", { name: "Apply color", exact: true }).click();
   page.once("dialog", (dialog) => dialog.accept("My saved theme"));
