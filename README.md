@@ -1,4 +1,4 @@
-# OKLCH kinda sucks
+# OKLCH color picker and ShadCDN theme editor
 
 Build shadcn/ui themes in your browser and compare the same color across synchronized RGB, HSL, HCL, and OKHCL pickers. See your edits in light and dark component previews together, then export CSS or a runnable React app.
 
@@ -8,7 +8,7 @@ Build shadcn/ui themes in your browser and compare the same color across synchro
 
 ## Try it
 
-[Open color.domi.ninja](https://color.domi.ninja). No installation needed.
+[Open color.domi.ninja](https://color.domi.ninja). No installation needed
 
 1. Choose a preset and click a theme color.
 2. Adjust it with the picker, sliders, or color fields. Add pickers to compare color spaces. Light and dark previews update together.
